@@ -265,4 +265,15 @@ export const api = {
     });
     return res.json();
   },
+
+  // Database Management
+  async clearAllData(): Promise<{ message: string }> {
+    const res = await fetch('/api/admin/clear-all-data', { method: 'POST' });
+    return res.json();
+  },
+
+  async seedDemoData(): Promise<{ message: string }> {
+    const res = await fetch('/api/admin/seed-demo-data', { method: 'POST' });
+    return res.json();
+  },
 };

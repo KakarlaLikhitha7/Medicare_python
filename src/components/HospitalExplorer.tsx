@@ -37,7 +37,7 @@ interface HospitalExplorerProps {
   onOpenTriage: () => void;
   onBackToPortal?: () => void;
   onHospitalAdded?: () => void;
-  currentUser?: UserSession;
+  currentUser?: UserSession | null;
   highContrast: boolean;
 }
 
@@ -329,63 +329,92 @@ export const HospitalExplorer: React.FC<HospitalExplorerProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {hospitals
-            .filter((h) => h.distanceKm <= filterRadius)
-            .map((hospital) => {
-              const isSelected = selectedHospitalId === hospital.id;
-              return (
-                <div
-                  key={hospital.id}
-                  onClick={() => {
-                    setSelectedHospitalId(hospital.id);
-                    setSelectedDepartmentId(null);
-                  }}
-                  className={`p-5 rounded-2xl cursor-pointer transition-all border relative flex flex-col justify-between ${
-                    isSelected
-                      ? highContrast
-                        ? 'border-yellow-400 bg-neutral-900 ring-2 ring-yellow-400 text-white'
-                        : 'border-emerald-600 bg-emerald-50/70 shadow-md ring-2 ring-emerald-500'
-                      : highContrast
-                      ? 'border-neutral-700 bg-neutral-900 hover:border-yellow-400 text-white'
-                      : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-md'
-                  }`}
-                >
-                  {isSelected && (
-                    <div className="absolute top-3 right-3 bg-emerald-600 text-white p-1 rounded-full">
-                      <CheckCircle2 className="w-4 h-4" />
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                        <MapPin className="w-3 h-3 text-emerald-600" />
-                        {hospital.distanceKm} km away
-                      </span>
-                      <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
-                        <Star className="w-3.5 h-3.5 fill-amber-400" />
-                        <span>{hospital.rating}</span>
+        {hospitals.length === 0 ? (
+          <div className="p-8 rounded-3xl bg-white border border-slate-200 text-center space-y-4 shadow-xs">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto text-2xl">
+              🏥
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-800">No Hospitals Registered Yet</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              Your database has 0 hospital records. Register your first healthcare facility as Central Admin, or load the sample demo dataset for testing.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setShowAddHospModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 shadow-sm cursor-pointer"
+              >
+                + Register First Hospital (Admin)
+              </button>
+              <button
+                onClick={async () => {
+                  await api.seedDemoData();
+                  onHospitalAdded?.();
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 border border-slate-300 cursor-pointer"
+              >
+                ⚡ Load Sample Demo Data
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {hospitals
+              .filter((h) => h.distanceKm <= filterRadius)
+              .map((hospital) => {
+                const isSelected = selectedHospitalId === hospital.id;
+                return (
+                  <div
+                    key={hospital.id}
+                    onClick={() => {
+                      setSelectedHospitalId(hospital.id);
+                      setSelectedDepartmentId(null);
+                    }}
+                    className={`p-5 rounded-2xl cursor-pointer transition-all border relative flex flex-col justify-between ${
+                      isSelected
+                        ? highContrast
+                          ? 'border-yellow-400 bg-neutral-900 ring-2 ring-yellow-400 text-white'
+                          : 'border-emerald-600 bg-emerald-50/70 shadow-md ring-2 ring-emerald-500'
+                        : highContrast
+                        ? 'border-neutral-700 bg-neutral-900 hover:border-yellow-400 text-white'
+                        : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-md'
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-3 right-3 bg-emerald-600 text-white p-1 rounded-full">
+                        <CheckCircle2 className="w-4 h-4" />
                       </div>
+                    )}
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                          <MapPin className="w-3 h-3 text-emerald-600" />
+                          {hospital.distanceKm} km away
+                        </span>
+                        <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
+                          <Star className="w-3.5 h-3.5 fill-amber-400" />
+                          <span>{hospital.rating}</span>
+                        </div>
+                      </div>
+
+                      <h3 className="font-extrabold text-base mb-1 leading-snug">{hospital.name}</h3>
+                      <p className="text-xs text-slate-500 mb-3">{hospital.address}, {hospital.city}</p>
                     </div>
 
-                    <h3 className="font-extrabold text-base mb-1 leading-snug">{hospital.name}</h3>
-                    <p className="text-xs text-slate-500 mb-3">{hospital.address}, {hospital.city}</p>
+                    <div className="pt-3 border-t border-slate-100 text-xs flex items-center justify-between">
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-slate-400" />
+                        {hospital.phone}
+                      </span>
+                      <span className="font-semibold text-emerald-600">
+                        {hospital.departments.length} Depts &rarr;
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="pt-3 border-t border-slate-100 text-xs flex items-center justify-between">
-                    <span className="text-slate-500 flex items-center gap-1">
-                      <Phone className="w-3 h-3 text-slate-400" />
-                      {hospital.phone}
-                    </span>
-                    <span className="font-semibold text-emerald-600">
-                      {hospital.departments.length} Depts &rarr;
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-        </div>
+                );
+              })}
+          </div>
+        )}
       </div>
 
       {/* SECTION 2: DEPARTMENTS (Shows when Hospital Selected or All) */}

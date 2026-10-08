@@ -158,17 +158,39 @@ export const CentralAdminControl: React.FC<CentralAdminControlProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={async () => {
+                if (window.confirm('Clear all database records to test a fresh empty state?')) {
+                  await api.clearAllData();
+                  onRefreshAll();
+                }
+              }}
+              className="px-3 py-2 rounded-xl bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-800 font-semibold text-xs transition-all cursor-pointer"
+              title="Wipe database to test fresh registration and empty state"
+            >
+              🗑️ Clear DB (Empty State)
+            </button>
+            <button
+              onClick={async () => {
+                await api.seedDemoData();
+                onRefreshAll();
+              }}
+              className="px-3 py-2 rounded-xl bg-emerald-950/70 hover:bg-emerald-900 text-emerald-200 border border-emerald-700 font-semibold text-xs transition-all cursor-pointer"
+              title="Reload sample demo hospitals and appointments"
+            >
+              ⚡ Reload Demo Data
+            </button>
             <button
               onClick={() => setActiveTab('add_hospital')}
-              className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 cursor-pointer shadow-lg transition-all"
+              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 cursor-pointer shadow-lg transition-all"
             >
               <Plus className="w-4 h-4" />
               <span>+ Add New Hospital</span>
             </button>
             <button
               onClick={onRefreshAll}
-              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white cursor-pointer transition-all"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white cursor-pointer transition-all"
               title="Refresh Central Data"
             >
               <RefreshCw className="w-4 h-4" />

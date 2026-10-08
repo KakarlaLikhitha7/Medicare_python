@@ -712,7 +712,7 @@ let appointments: Appointment[] = [
 ];
 
 // Seed Prescriptions
-const prescriptions: Prescription[] = [
+let prescriptions: Prescription[] = [
   {
     id: 'rx-101',
     appointmentId: 1,
@@ -802,7 +802,7 @@ const smsLogs: SMSLog[] = [
 ];
 
 // Seed Patients with EHR Vitals, Chronic Conditions, Allergies, and Nurse Clinical Notes
-const patients: Patient[] = [
+let patients: Patient[] = [
   {
     id: 'p-1',
     name: 'Kamlesh',
@@ -933,7 +933,7 @@ export interface Bill {
   status: 'Paid' | 'Pending' | 'Insurance Claimed';
 }
 
-const bills: Bill[] = [
+let bills: Bill[] = [
   {
     id: 'INV-2022-001',
     appointmentId: 1,
@@ -971,9 +971,38 @@ const bills: Bill[] = [
   },
 ];
 
+// Keep initial copies for database reset & empty-state testing
+const INITIAL_HOSPITALS_SNAPSHOT = JSON.parse(JSON.stringify(hospitals));
+const INITIAL_DOCTORS_SNAPSHOT = JSON.parse(JSON.stringify(doctors));
+const INITIAL_APPOINTMENTS_SNAPSHOT = JSON.parse(JSON.stringify(appointments));
+const INITIAL_PATIENTS_SNAPSHOT = JSON.parse(JSON.stringify(patients));
+const INITIAL_BILLS_SNAPSHOT = JSON.parse(JSON.stringify(bills));
+const INITIAL_PRESCRIPTIONS_SNAPSHOT = JSON.parse(JSON.stringify(prescriptions));
+
 // ==========================================
 // API ROUTES
 // ==========================================
+
+// Database Administration (Empty State vs Seed Data Testing)
+app.post('/api/admin/clear-all-data', (_req: Request, res: Response) => {
+  hospitals = [];
+  doctors = [];
+  appointments = [];
+  patients = [];
+  bills = [];
+  prescriptions = [];
+  res.json({ message: 'All database records cleared. Database is now completely empty.' });
+});
+
+app.post('/api/admin/seed-demo-data', (_req: Request, res: Response) => {
+  hospitals = JSON.parse(JSON.stringify(INITIAL_HOSPITALS_SNAPSHOT));
+  doctors = JSON.parse(JSON.stringify(INITIAL_DOCTORS_SNAPSHOT));
+  appointments = JSON.parse(JSON.stringify(INITIAL_APPOINTMENTS_SNAPSHOT));
+  patients = JSON.parse(JSON.stringify(INITIAL_PATIENTS_SNAPSHOT));
+  bills = JSON.parse(JSON.stringify(INITIAL_BILLS_SNAPSHOT));
+  prescriptions = JSON.parse(JSON.stringify(INITIAL_PRESCRIPTIONS_SNAPSHOT));
+  res.json({ message: 'Sample demo dataset successfully reloaded.' });
+});
 
 // Hospitals
 app.get('/api/hospitals', (_req: Request, res: Response) => {

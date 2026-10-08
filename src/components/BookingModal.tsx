@@ -17,7 +17,7 @@ import {
 
 interface BookingModalProps {
   doctor: Doctor | null;
-  currentUser: UserSession;
+  currentUser: UserSession | null;
   onClose: () => void;
   onSuccess: (newAppointment: Appointment, smsMessage?: string) => void;
   highContrast: boolean;
@@ -43,11 +43,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   // Patient form fields
   const [patientName, setPatientName] = useState<string>(
-    currentUser.role === 'patient' ? currentUser.name : ''
+    currentUser?.role === 'patient' ? currentUser.name : ''
   );
   const [patientAge, setPatientAge] = useState<number>(30);
   const [patientPhone, setPatientPhone] = useState<string>(
-    currentUser.phone || '9876543210'
+    currentUser?.phone || ''
   );
   const [patientDisease, setPatientDisease] = useState<string>(
     prefilledDisease || 'COVID-19'

@@ -50,8 +50,8 @@ export default function App() {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
 
-  // Active User Session (Defaults to Kamlesh - record #1 in screenshot for instant interactive testing)
-  const [currentUser, setCurrentUser] = useState<UserSession>({
+  // Active User Session (Defaults to Kamlesh for instant interactive demo, can be logged out or switched anytime)
+  const [currentUser, setCurrentUser] = useState<UserSession | null>({
     role: 'patient',
     name: 'Kamlesh',
     email: 'kamlesh.p@gmail.com',
@@ -106,7 +106,7 @@ export default function App() {
       desc: smsText || `Slot reserved for ${newAppt.slotTime} on ${newAppt.appointmentDate}. Automated SMS sent to ${newAppt.patientPhone}.`,
     });
     setTimeout(() => setToastNotice(null), 6000);
-    if (currentUser.role === 'patient') {
+    if (currentUser?.role === 'patient') {
       setCurrentTab('patient');
     }
     loadAllData();
@@ -132,6 +132,10 @@ export default function App() {
         setCurrentTab={setCurrentTab}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={() => {
+          setCurrentUser(null);
+          setCurrentTab('hierarchy');
+        }}
         onOpenTriage={() => setIsTriageOpen(true)}
         onOpenBillingChat={() => setIsBillingChatOpen(true)}
         onOpenSMSDrawer={() => setIsSMSDrawerOpen(true)}
@@ -205,8 +209,34 @@ export default function App() {
               />
             )}
 
+            {/* Sign-in Gatekeeper for unauthenticated visitors trying to access role workspaces */}
+            {!currentUser && currentTab !== 'hierarchy' && (
+              <div className="max-w-md mx-auto text-center p-8 rounded-3xl bg-white border border-slate-200 shadow-xl space-y-4 my-12">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto text-3xl font-bold">
+                  🔐
+                </div>
+                <h2 className="text-xl font-extrabold text-slate-800">
+                  {currentTab === 'patient' && 'Patient Sign In Required'}
+                  {(currentTab === 'hospital' || currentTab === 'nurse') && 'Hospital Desk Sign In Required'}
+                  {currentTab === 'doctor' && 'Doctor Portal Sign In Required'}
+                  {(currentTab === 'admin' || currentTab === 'classic') && 'Central Admin Sign In Required'}
+                </h2>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Please sign in or register a new account to access this role workspace.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md transition-all cursor-pointer"
+                  >
+                    Sign In / Register Account &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* 2. Patient Portal: Health records, Prescriptions, AI explainer */}
-            {currentTab === 'patient' && (
+            {currentTab === 'patient' && currentUser && (
               <PatientPortal
                 currentUser={currentUser}
                 appointments={appointments}
@@ -217,7 +247,7 @@ export default function App() {
             )}
 
             {/* 3. Hospital Operations & Reception Desk (Schedule walk-ins, monitor appointments, update patient vitals & EHR) */}
-            {(currentTab === 'hospital' || currentTab === 'nurse') && (
+            {(currentTab === 'hospital' || currentTab === 'nurse') && currentUser && (
               <HospitalDesk
                 currentUser={currentUser}
                 hospitals={hospitals}
@@ -230,7 +260,7 @@ export default function App() {
             )}
 
             {/* 4. Doctor Dashboard: 16-slot queue, conduct consultations, prescribe medicine */}
-            {currentTab === 'doctor' && (
+            {currentTab === 'doctor' && currentUser && (
               <DoctorDashboard
                 doctors={doctors}
                 appointments={appointments}
@@ -241,7 +271,7 @@ export default function App() {
             )}
 
             {/* 5. Centralized Multi-Hospital Administration (Check Details for All Hospitals, Add Hospitals, Multi-Facility Governance) */}
-            {(currentTab === 'admin' || currentTab === 'classic') && (
+            {(currentTab === 'admin' || currentTab === 'classic') && currentUser && (
               <CentralAdminControl
                 currentUser={currentUser}
                 hospitals={hospitals}
@@ -294,7 +324,7 @@ export default function App() {
       <BillingChatModal
         isOpen={isBillingChatOpen}
         onClose={() => setIsBillingChatOpen(false)}
-        patientName={currentUser.name}
+        patientName={currentUser?.name || 'Patient'}
         highContrast={highContrast}
       />
 
