@@ -67,6 +67,20 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
 
   const activeHospital = hospitals.find((h) => h.id === activeHospitalId) || hospitals[0];
 
+  if (!activeHospital || hospitals.length === 0) {
+    return (
+      <div className="p-12 rounded-3xl bg-white border border-slate-200 text-center space-y-4 shadow-sm max-w-xl mx-auto my-8">
+        <div className="w-16 h-16 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center mx-auto text-3xl">
+          🏥
+        </div>
+        <h2 className="text-xl font-extrabold text-slate-800">No Hospital Facilities in Database</h2>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          The database currently has 0 registered hospitals. Central Admin must first register a hospital facility before OPD reception and nursing desks can manage walk-ins and patient vitals.
+        </p>
+      </div>
+    );
+  }
+
   // Doctors belonging to this hospital
   const hospitalDoctors = doctors.filter((doc) => doc.hospitalId === activeHospitalId);
 

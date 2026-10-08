@@ -177,53 +177,8 @@ export const STANDARD_SLOTS = [
   '16:30',
 ];
 
-// Seed Data
-let hospitals: Hospital[] = [
-  {
-    id: 'hosp-1',
-    name: 'City Care General Hospital',
-    address: '42 Medical Boulevard, Central District',
-    city: 'Pune',
-    distanceKm: 0.8,
-    rating: 4.9,
-    phone: '+91 20 2567 8900',
-    emergencyPhone: '108',
-    departments: ['dept-1', 'dept-2', 'dept-3', 'dept-4', 'dept-5'],
-  },
-  {
-    id: 'hosp-2',
-    name: 'Apollo Health City & Research Center',
-    address: '15 High Tech Avenue, Baner',
-    city: 'Pune',
-    distanceKm: 2.3,
-    rating: 4.8,
-    phone: '+91 20 6688 1234',
-    emergencyPhone: '102',
-    departments: ['dept-1', 'dept-2', 'dept-3', 'dept-6', 'dept-7'],
-  },
-  {
-    id: 'hosp-3',
-    name: 'Metro Superspecialty Healthcare',
-    address: '88 Station Link Road, Shivaji Nagar',
-    city: 'Pune',
-    distanceKm: 3.5,
-    rating: 4.7,
-    phone: '+91 20 2445 7788',
-    emergencyPhone: '112',
-    departments: ['dept-1', 'dept-4', 'dept-5', 'dept-6'],
-  },
-  {
-    id: 'hosp-4',
-    name: 'Sunrise Family & Children Hospital',
-    address: '102 Green Park Avenue, Kothrud',
-    city: 'Pune',
-    distanceKm: 5.1,
-    rating: 4.9,
-    phone: '+91 20 2544 3322',
-    emergencyPhone: '108',
-    departments: ['dept-3', 'dept-4', 'dept-7'],
-  },
-];
+// Active Clinical Data Store (100% Data-Driven, Starts Completely Empty)
+let hospitals: Hospital[] = [];
 
 const departments: Department[] = [
   {
@@ -971,38 +926,9 @@ let bills: Bill[] = [
   },
 ];
 
-// Keep initial copies for database reset & empty-state testing
-const INITIAL_HOSPITALS_SNAPSHOT = JSON.parse(JSON.stringify(hospitals));
-const INITIAL_DOCTORS_SNAPSHOT = JSON.parse(JSON.stringify(doctors));
-const INITIAL_APPOINTMENTS_SNAPSHOT = JSON.parse(JSON.stringify(appointments));
-const INITIAL_PATIENTS_SNAPSHOT = JSON.parse(JSON.stringify(patients));
-const INITIAL_BILLS_SNAPSHOT = JSON.parse(JSON.stringify(bills));
-const INITIAL_PRESCRIPTIONS_SNAPSHOT = JSON.parse(JSON.stringify(prescriptions));
-
 // ==========================================
 // API ROUTES
 // ==========================================
-
-// Database Administration (Empty State vs Seed Data Testing)
-app.post('/api/admin/clear-all-data', (_req: Request, res: Response) => {
-  hospitals = [];
-  doctors = [];
-  appointments = [];
-  patients = [];
-  bills = [];
-  prescriptions = [];
-  res.json({ message: 'All database records cleared. Database is now completely empty.' });
-});
-
-app.post('/api/admin/seed-demo-data', (_req: Request, res: Response) => {
-  hospitals = JSON.parse(JSON.stringify(INITIAL_HOSPITALS_SNAPSHOT));
-  doctors = JSON.parse(JSON.stringify(INITIAL_DOCTORS_SNAPSHOT));
-  appointments = JSON.parse(JSON.stringify(INITIAL_APPOINTMENTS_SNAPSHOT));
-  patients = JSON.parse(JSON.stringify(INITIAL_PATIENTS_SNAPSHOT));
-  bills = JSON.parse(JSON.stringify(INITIAL_BILLS_SNAPSHOT));
-  prescriptions = JSON.parse(JSON.stringify(INITIAL_PRESCRIPTIONS_SNAPSHOT));
-  res.json({ message: 'Sample demo dataset successfully reloaded.' });
-});
 
 // Hospitals
 app.get('/api/hospitals', (_req: Request, res: Response) => {

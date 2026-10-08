@@ -62,8 +62,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setCurrentTab('hospital');
               } else if (currentUser?.role === 'admin') {
                 setCurrentTab('admin');
+              } else if (currentUser?.role === 'patient') {
+                setCurrentTab('patient');
               } else {
-                setCurrentTab('hierarchy');
+                setCurrentTab('landing');
               }
             }}
           >
@@ -99,6 +101,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             {!currentUser && (
               <>
                 <button
+                  onClick={() => setCurrentTab('landing')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    currentTab === 'landing'
+                      ? highContrast
+                        ? 'bg-yellow-400 text-black font-bold'
+                        : 'bg-emerald-50 text-emerald-700 shadow-xs font-bold'
+                      : 'hover:bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  <Shield className="w-4 h-4 text-emerald-600" />
+                  <span>Role Access Portals</span>
+                </button>
+
+                <button
                   onClick={() => setCurrentTab('hierarchy')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                     currentTab === 'hierarchy'
@@ -109,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 >
                   <Building2 className="w-4 h-4" />
-                  <span>Hospitals &amp; Doctors</span>
+                  <span>Public Hospital Directory</span>
                 </button>
 
                 <button
@@ -279,30 +295,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <Building2 className="w-4 h-4" />
                   <span>Facilities Directory</span>
-                </button>
-
-                <button
-                  onClick={() => setCurrentTab('hospital')}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                    currentTab === 'hospital'
-                      ? 'bg-teal-700 text-white font-bold'
-                      : 'hover:bg-slate-100 text-slate-600'
-                  }`}
-                  title="Inspect Hospital Desk"
-                >
-                  <span>Desk View</span>
-                </button>
-
-                <button
-                  onClick={() => setCurrentTab('doctor')}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                    currentTab === 'doctor'
-                      ? 'bg-emerald-700 text-white font-bold'
-                      : 'hover:bg-slate-100 text-slate-600'
-                  }`}
-                  title="Inspect Doctor Console"
-                >
-                  <span>Doctor View</span>
                 </button>
               </>
             )}

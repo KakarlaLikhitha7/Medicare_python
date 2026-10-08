@@ -38,6 +38,20 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
   const activeDoctor = doctors.find((d) => d.id === selectedDoctorId) || doctors[0];
 
+  if (!activeDoctor) {
+    return (
+      <div className="p-12 rounded-3xl bg-white border border-slate-200 text-center space-y-4 shadow-sm max-w-xl mx-auto my-8">
+        <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto text-3xl">
+          🩺
+        </div>
+        <h2 className="text-xl font-extrabold text-slate-800">No Doctor Profiles Found in Database</h2>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          The database currently has 0 registered doctors. Central Admin must first register a hospital and add doctor profiles to the clinical roster.
+        </p>
+      </div>
+    );
+  }
+
   // Prescription issuance modal
   const [prescribeAppt, setPrescribeAppt] = useState<Appointment | null>(null);
   const [diagnosis, setDiagnosis] = useState('');

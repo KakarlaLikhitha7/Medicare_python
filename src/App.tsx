@@ -26,6 +26,7 @@ import { SMSDrawer } from './components/SMSDrawer';
 import { AuthModal } from './components/AuthModal';
 import { HospitalDesk } from './components/HospitalDesk';
 import { CentralAdminControl } from './components/CentralAdminControl';
+import { PortalLandingGateway } from './components/PortalLandingGateway';
 
 import {
   CheckCircle2,
@@ -34,7 +35,7 @@ import {
 
 export default function App() {
   // Navigation & View state
-  const [currentTab, setCurrentTab] = useState<string>('hierarchy');
+  const [currentTab, setCurrentTab] = useState<string>('landing');
   const [highContrast, setHighContrast] = useState<boolean>(false);
 
   // Core Data
@@ -50,14 +51,10 @@ export default function App() {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
 
-  // Active User Session (Defaults to Kamlesh for instant interactive demo, can be logged out or switched anytime)
-  const [currentUser, setCurrentUser] = useState<UserSession | null>({
-    role: 'patient',
-    name: 'Kamlesh',
-    email: 'kamlesh.p@gmail.com',
-    phone: '9876543210',
-    patientId: 'p-1',
-  });
+  // Active User Session: Defaults to null. Single role login at a time.
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
+  const [authRole, setAuthRole] = useState<'patient' | 'hospital' | 'doctor' | 'admin'>('patient');
+  const [authIsSignUp, setAuthIsSignUp] = useState<boolean>(false);
 
   // Modals
   const [bookingDoctor, setBookingDoctor] = useState<Doctor | null>(null);
@@ -131,10 +128,14 @@ export default function App() {
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
         currentUser={currentUser}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenAuth={() => {
+          setAuthRole('patient');
+          setAuthIsSignUp(false);
+          setIsAuthModalOpen(true);
+        }}
         onLogout={() => {
           setCurrentUser(null);
-          setCurrentTab('hierarchy');
+          setCurrentTab('landing');
         }}
         onOpenTriage={() => setIsTriageOpen(true)}
         onOpenBillingChat={() => setIsBillingChatOpen(true)}
@@ -187,30 +188,59 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* 1. Structured Hierarchy: Nearest Hospitals -> Departments -> Doctors */}
-            {currentTab === 'hierarchy' && (
-              <HospitalExplorer
-                hospitals={hospitals}
-                departments={departments}
-                doctors={doctors}
-                selectedHospitalId={selectedHospitalId}
-                setSelectedHospitalId={setSelectedHospitalId}
-                selectedDepartmentId={selectedDepartmentId}
-                setSelectedDepartmentId={setSelectedDepartmentId}
-                onSelectDoctorToBook={(doc) => {
-                  setBookingDisease('General Consultation');
-                  setBookingDoctor(doc);
+            {/* 0. Portal Landing Gateway (Shown to unauthenticated users) */}
+            {!currentUser && currentTab === 'landing' && (
+              <PortalLandingGateway
+                onSelectRole={(selectedRole, isSignUpMode) => {
+                  setAuthRole(selectedRole);
+                  setAuthIsSignUp(isSignUpMode);
+                  setIsAuthModalOpen(true);
                 }}
-                onOpenTriage={() => setIsTriageOpen(true)}
-                onBackToPortal={() => setCurrentTab('patient')}
-                onHospitalAdded={loadAllData}
-                currentUser={currentUser}
+                onExplorePublic={() => setCurrentTab('hierarchy')}
+                hospitalsCount={hospitals.length}
+                doctorsCount={doctors.length}
                 highContrast={highContrast}
               />
             )}
 
+            {/* 1. Structured Hierarchy: Nearest Hospitals -> Departments -> Doctors */}
+            {currentTab === 'hierarchy' && (
+              <div>
+                {!currentUser && (
+                  <div className="mb-4 flex items-center justify-between p-3.5 rounded-2xl bg-slate-900 text-white text-xs font-semibold">
+                    <span>Public Hospital &amp; Doctor Directory (Guest View)</span>
+                    <button
+                      onClick={() => setCurrentTab('landing')}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all cursor-pointer"
+                    >
+                      &larr; Return to Role Sign In / Register
+                    </button>
+                  </div>
+                )}
+                <HospitalExplorer
+                  hospitals={hospitals}
+                  departments={departments}
+                  doctors={doctors}
+                  appointments={appointments}
+                  selectedHospitalId={selectedHospitalId}
+                  setSelectedHospitalId={setSelectedHospitalId}
+                  selectedDepartmentId={selectedDepartmentId}
+                  setSelectedDepartmentId={setSelectedDepartmentId}
+                  onSelectDoctorToBook={(doc) => {
+                    setBookingDisease('General Consultation');
+                    setBookingDoctor(doc);
+                  }}
+                  onOpenTriage={() => setIsTriageOpen(true)}
+                  onBackToPortal={() => setCurrentTab(currentUser ? (currentUser.role === 'admin' ? 'admin' : currentUser.role === 'doctor' ? 'doctor' : currentUser.role === 'hospital' ? 'hospital' : 'patient') : 'landing')}
+                  onHospitalAdded={loadAllData}
+                  currentUser={currentUser}
+                  highContrast={highContrast}
+                />
+              </div>
+            )}
+
             {/* Sign-in Gatekeeper for unauthenticated visitors trying to access role workspaces */}
-            {!currentUser && currentTab !== 'hierarchy' && (
+            {!currentUser && currentTab !== 'hierarchy' && currentTab !== 'landing' && (
               <div className="max-w-md mx-auto text-center p-8 rounded-3xl bg-white border border-slate-200 shadow-xl space-y-4 my-12">
                 <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto text-3xl font-bold">
                   🔐
@@ -224,12 +254,25 @@ export default function App() {
                 <p className="text-xs text-slate-500 leading-relaxed">
                   Please sign in or register a new account to access this role workspace.
                 </p>
-                <div className="pt-2">
+                <div className="pt-2 flex flex-col gap-2">
                   <button
-                    onClick={() => setIsAuthModalOpen(true)}
+                    onClick={() => {
+                      if (currentTab === 'patient') setAuthRole('patient');
+                      else if (currentTab === 'doctor') setAuthRole('doctor');
+                      else if (currentTab === 'hospital' || currentTab === 'nurse') setAuthRole('hospital');
+                      else if (currentTab === 'admin') setAuthRole('admin');
+                      setAuthIsSignUp(false);
+                      setIsAuthModalOpen(true);
+                    }}
                     className="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md transition-all cursor-pointer"
                   >
-                    Sign In / Register Account &rarr;
+                    Sign In to Portal &rarr;
+                  </button>
+                  <button
+                    onClick={() => setCurrentTab('landing')}
+                    className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer"
+                  >
+                    &larr; Choose Another Role
                   </button>
                 </div>
               </div>
@@ -337,12 +380,14 @@ export default function App() {
         highContrast={highContrast}
       />
 
-      {/* 5. Auth Modal (Doctors choose hospital on signup) */}
+      {/* 5. Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         departments={departments}
         hospitals={hospitals}
+        initialRole={authRole}
+        initialIsSignUp={authIsSignUp}
         onDoctorRegistered={loadAllData}
         onLoginSuccess={(user) => {
           setCurrentUser(user);

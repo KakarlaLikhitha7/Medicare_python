@@ -45,14 +45,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [patientName, setPatientName] = useState<string>(
     currentUser?.role === 'patient' ? currentUser.name : ''
   );
-  const [patientAge, setPatientAge] = useState<number>(30);
+  const [patientAge, setPatientAge] = useState<number | ''>('');
   const [patientPhone, setPatientPhone] = useState<string>(
     currentUser?.phone || ''
   );
   const [patientDisease, setPatientDisease] = useState<string>(
-    prefilledDisease || 'COVID-19'
+    prefilledDisease || 'General Consultation'
   );
-  const [patientAddress, setPatientAddress] = useState<string>('Pune');
+  const [patientAddress, setPatientAddress] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
   // Fetch slots whenever doctor or selectedDate changes
@@ -288,7 +288,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Kamlesh"
+                    placeholder="Enter patient full name"
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-emerald-500"
@@ -304,8 +304,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   type="number"
                   min={1}
                   max={120}
+                  placeholder="Age"
                   value={patientAge}
-                  onChange={(e) => setPatientAge(Number(e.target.value))}
+                  onChange={(e) => setPatientAge(e.target.value ? Number(e.target.value) : '')}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-emerald-500"
                 />
               </div>
@@ -319,7 +320,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <input
                     type="tel"
                     required
-                    placeholder="9876543210"
+                    placeholder="Enter 10-digit phone number"
                     value={patientPhone}
                     onChange={(e) => setPatientPhone(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-emerald-500"

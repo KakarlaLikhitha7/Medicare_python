@@ -166,47 +166,32 @@ CREATE TABLE IF NOT EXISTS sms_logs (
 );
 
 -- ===================================================================
--- SEED DATA (Directly matching Screenshots 1, 3, and 4)
+-- OPTIONAL SEED DATA (Commented out for clean, 100% data-driven setup)
+-- Uncomment below ONLY if you want to preload sample demo records!
 -- ===================================================================
+--
+-- INSERT INTO hospitals (id, name, address, city, distance_km, rating, phone, emergency_phone) VALUES
+-- ('hosp-1', 'City Care General Hospital', '42 Medical Boulevard, Central District', 'Pune', 0.8, 4.90, '+91 20 2567 8900', '108'),
+-- ('hosp-2', 'Apollo Health City & Research Center', '15 High Tech Avenue, Baner', 'Pune', 2.3, 4.80, '+91 20 6688 1234', '102'),
+-- ('hosp-3', 'Metro Superspecialty Healthcare', '88 Station Link Road, Shivaji Nagar', 'Pune', 3.5, 4.70, '+91 20 2445 7788', '112'),
+-- ('hosp-4', 'Sunrise Family & Children Hospital', '102 Green Park Avenue, Kothrud', 'Pune', 5.1, 4.90, '+91 20 2544 3322', '108');
+--
+-- INSERT INTO departments (id, name, description, icon) VALUES
+-- ('dept-1', 'Pulmonology & Respiratory Care', 'Expert care for respiratory disorders, viral pneumonia, COVID-19 & asthma.', 'Stethoscope'),
+-- ('dept-2', 'Cardiology', 'Comprehensive heart care, coronary diagnostics, hypertension and ECG monitoring.', 'HeartPulse'),
+-- ('dept-3', 'General Medicine & Infectious Diseases', 'Primary care, viral fever management, diabetes, infections and general wellness.', 'Activity'),
+-- ('dept-4', 'Pediatrics', 'Specialized healthcare for infants, children, immunization and child development.', 'Baby'),
+-- ('dept-5', 'Orthopedics & Joint Care', 'Bone fractures, arthritis, joint replacements and musculoskeletal therapy.', 'Bone'),
+-- ('dept-6', 'Neurology & Brain Sciences', 'Diagnosis and care for chronic migraines, epilepsy, nerve disorders and stroke.', 'Brain'),
+-- ('dept-7', 'Dermatology & Skin Health', 'Skin allergies, eczema, acne solutions, cosmetic dermatology and biopsy.', 'Sparkles');
+--
 
-INSERT INTO hospitals (id, name, address, city, distance_km, rating, phone, emergency_phone) VALUES
-('hosp-1', 'City Care General Hospital', '42 Medical Boulevard, Central District', 'Pune', 0.8, 4.90, '+91 20 2567 8900', '108'),
-('hosp-2', 'Apollo Health City & Research Center', '15 High Tech Avenue, Baner', 'Pune', 2.3, 4.80, '+91 20 6688 1234', '102'),
-('hosp-3', 'Metro Superspecialty Healthcare', '88 Station Link Road, Shivaji Nagar', 'Pune', 3.5, 4.70, '+91 20 2445 7788', '112'),
-('hosp-4', 'Sunrise Family & Children Hospital', '102 Green Park Avenue, Kothrud', 'Pune', 5.1, 4.90, '+91 20 2544 3322', '108')
-ON DUPLICATE KEY UPDATE name=VALUES(name);
-
-INSERT INTO departments (id, name, description, icon) VALUES
-('dept-1', 'Pulmonology & Respiratory Care', 'Expert care for respiratory disorders, viral pneumonia, COVID-19 & asthma.', 'Stethoscope'),
-('dept-2', 'Cardiology', 'Comprehensive heart care, coronary diagnostics, hypertension and ECG monitoring.', 'HeartPulse'),
-('dept-3', 'General Medicine & Infectious Diseases', 'Primary care, viral fever management, diabetes, infections and general wellness.', 'Activity'),
-('dept-4', 'Pediatrics', 'Specialized healthcare for infants, children, immunization and child development.', 'Baby'),
-('dept-5', 'Orthopedics & Joint Care', 'Bone fractures, arthritis, joint replacements and musculoskeletal therapy.', 'Bone'),
-('dept-6', 'Neurology & Brain Sciences', 'Diagnosis and care for chronic migraines, epilepsy, nerve disorders and stroke.', 'Brain'),
-('dept-7', 'Dermatology & Skin Health', 'Skin allergies, eczema, acne solutions, cosmetic dermatology and biopsy.', 'Sparkles')
-ON DUPLICATE KEY UPDATE name=VALUES(name);
-
-INSERT INTO doctors (id, hospital_id, department_id, name, specialization, qualification, experience_years, consultation_fee, cabin, phone, email, rating, bio, max_patients_per_day, shift_start, shift_end) VALUES
-('doc-1', 'hosp-1', 'dept-1', 'Dr. Ramesh', 'Senior Pulmonologist & Critical Care', 'MBBS, MD (Pulmonary Medicine), FCCP', 16, 600.00, 'Room 204, 2nd Floor', '+91 98230 11223', 'dr.ramesh@citycare.org', 4.90, 'Renowned respiratory specialist with 16+ years experience treating COVID-19 and chronic bronchitis.', 16, '09:00:00', '17:00:00'),
-('doc-2', 'hosp-1', 'dept-3', 'Dr. Priyanka', 'Infectious Disease Specialist & Physician', 'MBBS, MD (General Medicine), DNB', 12, 550.00, 'Room 108, 1st Floor', '+91 98230 44556', 'dr.priyanka@citycare.org', 4.80, 'Lead physician for infectious disease treatment, fevers and preventive diagnostics.', 16, '09:00:00', '17:00:00'),
-('doc-3', 'hosp-2', 'dept-2', 'Dr. Rajesh Mehta', 'Senior Interventional Cardiologist', 'MBBS, MD, DM (Cardiology)', 20, 850.00, 'CathLab Suite B, Apollo Tower', '+91 98231 77889', 'dr.mehta@apollo.org', 4.95, 'Over 5,000 successful cardiac interventions.', 16, '09:00:00', '17:00:00')
-ON DUPLICATE KEY UPDATE name=VALUES(name);
-
--- Seed Appointments (Matches Screenshot 3 records)
-INSERT INTO appointments (id, sn, patient_name, patient_age, patient_phone, patient_disease, patient_address, doctor_id, doctor_name, appointment_date, appointment_day, slot_time, status) VALUES
-(1, 1, 'Kamlesh', 38, '9876543210', 'COVID-19', 'Camp, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '09:00', 'Scheduled'),
-(2, 2, 'Sa', 24, '7865432123', 'COVID-19', 'Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '09:30', 'Scheduled'),
-(3, 3, 'Deepak Kumar', 45, '9822114455', 'COVID-19', 'Kothrud, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '10:00', 'Scheduled'),
-(4, 4, 'Raj Kamal', 32, '9844223311', 'COVID-19', 'Hadapsar, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '10:30', 'Scheduled'),
-(5, 5, 'Seema Devi', 51, '9922334411', 'COVID-19', 'Aundh, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '11:00', 'Scheduled'),
-(6, 6, 'Suneeta Kumari', 29, '9855112233', 'FEVER', 'Viman Nagar, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '11:30', 'Scheduled'),
-(7, 7, 'Ram Krishan', 62, '9766554433', 'COVID-19', 'Deccan, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '12:00', 'Scheduled'),
-(8, 8, 'Ravi Kumar', 35, '9833441122', 'COVID-19', 'Baner, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '12:30', 'Scheduled'),
-(9, 9, 'Sateesh Kumar', 41, '9811224455', 'COVID-19', 'Wakad, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '13:00', 'Scheduled'),
-(10, 10, 'Suneel Sharma', 39, '9822336677', 'COVID-19', 'Koregaon Park, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '13:30', 'Scheduled'),
-(11, 11, 'Shivam Panday', 27, '9844551122', 'COVID-19', 'Bhosari, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '14:00', 'Scheduled'),
-(12, 12, 'Vineeta Sharma', 34, '9899887766', 'COVID-19', 'Model Colony, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '14:30', 'Scheduled'),
-(13, 13, 'Vishwareshar Kumar', 58, '9822998811', 'COVID-19', 'Pimpri, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '15:00', 'Scheduled'),
-(14, 14, 'Radha Panday', 48, '9811447788', 'COVID-19', 'Swargate, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '15:30', 'Scheduled'),
-(15, 15, 'Sohan Raj', 31, '9877443322', 'COVID-19', 'Katraj, Pune', 'doc-2', 'Dr. Priyanka', '2022-07-11', 'Monday', '09:00', 'Scheduled')
-ON DUPLICATE KEY UPDATE patient_name=VALUES(patient_name);
+--
+-- INSERT INTO doctors (id, hospital_id, department_id, name, specialization, qualification, experience_years, consultation_fee, cabin, phone, email, rating, bio, max_patients_per_day, shift_start, shift_end) VALUES
+-- ('doc-1', 'hosp-1', 'dept-1', 'Dr. Ramesh', 'Senior Pulmonologist & Critical Care', 'MBBS, MD (Pulmonary Medicine), FCCP', 16, 600.00, 'Room 204, 2nd Floor', '+91 98230 11223', 'dr.ramesh@citycare.org', 4.90, 'Renowned respiratory specialist with 16+ years experience treating COVID-19 and chronic bronchitis.', 16, '09:00:00', '17:00:00'),
+-- ('doc-2', 'hosp-1', 'dept-3', 'Dr. Priyanka', 'Infectious Disease Specialist & Physician', 'MBBS, MD (General Medicine), DNB', 12, 550.00, 'Room 108, 1st Floor', '+91 98230 44556', 'dr.priyanka@citycare.org', 4.80, 'Lead physician for infectious disease treatment, fevers and preventive diagnostics.', 16, '09:00:00', '17:00:00'),
+-- ('doc-3', 'hosp-2', 'dept-2', 'Dr. Rajesh Mehta', 'Senior Interventional Cardiologist', 'MBBS, MD, DM (Cardiology)', 20, 850.00, 'CathLab Suite B, Apollo Tower', '+91 98231 77889', 'dr.mehta@apollo.org', 4.95, 'Over 5,000 successful cardiac interventions.', 16, '09:00:00', '17:00:00');
+--
+-- INSERT INTO appointments (id, sn, patient_name, patient_age, patient_phone, patient_disease, patient_address, doctor_id, doctor_name, appointment_date, appointment_day, slot_time, status) VALUES
+-- (1, 1, 'Kamlesh', 38, '9876543210', 'COVID-19', 'Camp, Pune', 'doc-1', 'Dr. Ramesh', '2022-07-11', 'Monday', '09:00', 'Scheduled');
+--

@@ -24,6 +24,8 @@ interface AuthModalProps {
   onLoginSuccess: (user: UserSession) => void;
   onDoctorRegistered?: () => void;
   highContrast: boolean;
+  initialRole?: 'patient' | 'hospital' | 'doctor' | 'admin';
+  initialIsSignUp?: boolean;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -34,24 +36,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onLoginSuccess,
   onDoctorRegistered,
   highContrast,
+  initialRole,
+  initialIsSignUp,
 }) => {
-  const [role, setRole] = useState<'patient' | 'hospital' | 'doctor' | 'admin'>('patient');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [role, setRole] = useState<'patient' | 'hospital' | 'doctor' | 'admin'>(initialRole || 'patient');
+  const [isSignUp, setIsSignUp] = useState(initialIsSignUp || false);
+
+  React.useEffect(() => {
+    if (initialRole) setRole(initialRole);
+    if (initialIsSignUp !== undefined) setIsSignUp(initialIsSignUp);
+  }, [initialRole, initialIsSignUp, isOpen]);
 
   // Form Fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('password123');
-  const [hospitalId, setHospitalId] = useState(hospitals[0]?.id || 'hosp-1');
-  const [departmentId, setDepartmentId] = useState(departments[0]?.id || 'dept-1');
-  const [specialization, setSpecialization] = useState('Consultant Specialist');
-  const [qualification, setQualification] = useState('MBBS, MD');
-  const [cabin, setCabin] = useState('Room 205');
-  const [fee, setFee] = useState(600);
-  const [age, setAge] = useState(30);
+  const [password, setPassword] = useState('');
+  const [hospitalId, setHospitalId] = useState(hospitals[0]?.id || '');
+  const [departmentId, setDepartmentId] = useState(departments[0]?.id || '');
+  const [specialization, setSpecialization] = useState('');
+  const [qualification, setQualification] = useState('');
+  const [cabin, setCabin] = useState('');
+  const [fee, setFee] = useState<number | ''>('');
+  const [age, setAge] = useState<number | ''>('');
   const [bloodGroup, setBloodGroup] = useState('O+');
-  const [address, setAddress] = useState('Pune');
+  const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -63,23 +72,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setErrorMsg('');
 
+    if (!name.trim()) {
+      setErrorMsg('Full Name is required.');
+      return;
+    }
+
     try {
       setLoading(true);
-      let registeredDocId = 'doc-1';
+      let registeredDocId = `doc-${Date.now()}`;
 
       if (isSignUp && role === 'doctor') {
         const res = await api.createDoctor({
-          name: name.trim() || 'Dr. New Specialist',
-          hospitalId,
-          departmentId,
-          specialization: specialization || 'Consultant Specialist',
-          qualification: qualification || 'MBBS, MD',
-          consultationFee: Number(fee) || 600,
-          cabin: cabin || 'Room 101',
-          phone: phone || '+91 98000 00000',
-          email: email || 'doctor@medicare.org',
+          name: name.trim(),
+          hospitalId: hospitalId || hospitals[0]?.id || '',
+          departmentId: departmentId || departments[0]?.id || '',
+          specialization: specialization.trim() || 'General Specialist',
+          qualification: qualification.trim() || 'MBBS',
+          consultationFee: Number(fee) || 500,
+          cabin: cabin.trim() || 'Room 101',
+          phone: phone.trim() || '+91 00000 00000',
+          email: email.trim() || 'doctor@hospital.org',
         });
-        registeredDocId = res.doctor.id;
+        if (res?.doctor?.id) registeredDocId = res.doctor.id;
         if (onDoctorRegistered) onDoctorRegistered();
       }
 
@@ -87,21 +101,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       const session: UserSession = {
         role,
-        name:
-          name.trim() ||
-          (role === 'doctor'
-            ? 'Dr. Ramesh'
-            : role === 'hospital'
-            ? 'Hospital Desk & Nursing Team'
-            : role === 'admin'
-            ? 'Central Network Admin'
-            : 'Kamlesh'),
-        email: email.trim() || `${role}@medicare.org`,
-        phone: phone.trim() || '9876543210',
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
         doctorId: role === 'doctor' ? registeredDocId : undefined,
-        patientId: role === 'patient' ? 'p-1' : undefined,
-        department: role === 'doctor' ? selectedDeptObj?.name || 'Pulmonology' : undefined,
-        hospitalId: role === 'hospital' || role === 'doctor' ? hospitalId : undefined,
+        patientId: role === 'patient' ? `p-${Date.now()}` : undefined,
+        department: role === 'doctor' ? selectedDeptObj?.name || 'General Medicine' : undefined,
+        hospitalId: role === 'hospital' || role === 'doctor' ? (hospitalId || hospitals[0]?.id) : undefined,
         hospitalName: role === 'hospital' || role === 'doctor' ? selectedHospObj?.name : undefined,
       };
 
@@ -112,29 +118,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  // Quick Demo Logins
-  const handleQuickLogin = (
-    demoRole: 'patient' | 'hospital' | 'doctor' | 'admin',
-    demoName: string,
-    docId?: string,
-    demoHospitalId?: string,
-    demoHospitalName?: string
-  ) => {
-    const session: UserSession = {
-      role: demoRole,
-      name: demoName,
-      email: `${demoName.toLowerCase().replace(/[^a-z]/g, '')}@medicare.org`,
-      phone: '9876543210',
-      doctorId: docId,
-      patientId: demoRole === 'patient' ? 'p-1' : undefined,
-      department: docId ? 'Pulmonology' : undefined,
-      hospitalId: demoHospitalId || 'hosp-1',
-      hospitalName: demoHospitalName || 'City Care General Hospital',
-    };
-    onLoginSuccess(session);
-    onClose();
   };
 
   return (
@@ -171,48 +154,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-          {/* Quick Demo Switcher */}
-          <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-900">
-                ⚡ Instant 1-Click Role Switcher:
-              </span>
-              <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
-                Admin &rarr; Hospital &rarr; Doctor &rarr; Patient
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('patient', 'Kamlesh')}
-                className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-xs font-bold text-slate-800 hover:bg-emerald-100 transition-colors cursor-pointer"
-              >
-                👤 Kamlesh (Patient)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('hospital', 'City Care Hospital Desk', undefined, 'hosp-1', 'City Care General Hospital')}
-                className="px-3 py-1.5 rounded-xl bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 transition-colors cursor-pointer shadow-xs"
-              >
-                🏥 City Care Hospital Desk (Reception &amp; Vitals)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('doctor', 'Dr. Ramesh', 'doc-1', 'hosp-1', 'City Care General Hospital')}
-                className="px-3 py-1.5 rounded-xl bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 transition-colors cursor-pointer shadow-xs"
-              >
-                🩺 Dr. Ramesh (Doctor - 16 Slots)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin', 'Central Network Admin')}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-black transition-colors cursor-pointer shadow-xs"
-              >
-                🏢 Central Admin (Multi-Hospital Control)
-              </button>
-            </div>
-          </div>
-
           {/* Role Tabs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-slate-100 rounded-2xl">
             <button
@@ -311,7 +252,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder={role === 'doctor' ? 'Dr. Ramesh' : 'Kamlesh'}
+                placeholder={role === 'doctor' ? 'Enter Doctor Full Name (e.g. Dr. Jane Smith)' : 'Enter Your Full Name'}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300"
@@ -326,7 +267,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="email"
                   required
-                  placeholder="user@medicare.org"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300"
@@ -340,7 +281,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="tel"
                   required
-                  placeholder="9876543210"
+                  placeholder="Enter phone number"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300"

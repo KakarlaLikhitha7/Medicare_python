@@ -160,28 +160,6 @@ export const CentralAdminControl: React.FC<CentralAdminControlProps> = ({
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={async () => {
-                if (window.confirm('Clear all database records to test a fresh empty state?')) {
-                  await api.clearAllData();
-                  onRefreshAll();
-                }
-              }}
-              className="px-3 py-2 rounded-xl bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-800 font-semibold text-xs transition-all cursor-pointer"
-              title="Wipe database to test fresh registration and empty state"
-            >
-              🗑️ Clear DB (Empty State)
-            </button>
-            <button
-              onClick={async () => {
-                await api.seedDemoData();
-                onRefreshAll();
-              }}
-              className="px-3 py-2 rounded-xl bg-emerald-950/70 hover:bg-emerald-900 text-emerald-200 border border-emerald-700 font-semibold text-xs transition-all cursor-pointer"
-              title="Reload sample demo hospitals and appointments"
-            >
-              ⚡ Reload Demo Data
-            </button>
-            <button
               onClick={() => setActiveTab('add_hospital')}
               className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 cursor-pointer shadow-lg transition-all"
             >
@@ -395,6 +373,24 @@ export const CentralAdminControl: React.FC<CentralAdminControlProps> = ({
                 </div>
               );
             })}
+
+            {filteredHospitals.length === 0 && (
+              <div className="col-span-full p-12 text-center rounded-3xl bg-slate-50 border-2 border-dashed border-slate-300 space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto text-3xl">
+                  🏥
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-800">No Hospitals Found in Database</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                  There are currently 0 hospitals registered in your database. Register your first healthcare facility now to begin onboarding doctors and departments.
+                </p>
+                <button
+                  onClick={() => setActiveTab('add_hospital')}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                >
+                  + Register First Hospital
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

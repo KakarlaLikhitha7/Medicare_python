@@ -29,6 +29,7 @@ interface HospitalExplorerProps {
   hospitals: Hospital[];
   departments: Department[];
   doctors: Doctor[];
+  appointments?: Appointment[];
   selectedHospitalId: string | null;
   setSelectedHospitalId: (id: string | null) => void;
   selectedDepartmentId: string | null;
@@ -45,6 +46,7 @@ export const HospitalExplorer: React.FC<HospitalExplorerProps> = ({
   hospitals,
   departments,
   doctors,
+  appointments = [],
   selectedHospitalId,
   setSelectedHospitalId,
   selectedDepartmentId,
@@ -336,7 +338,7 @@ export const HospitalExplorer: React.FC<HospitalExplorerProps> = ({
             </div>
             <h3 className="text-lg font-extrabold text-slate-800">No Hospitals Registered Yet</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-              Your database has 0 hospital records. Register your first healthcare facility as Central Admin, or load the sample demo dataset for testing.
+              Your database currently has 0 hospital records. Please register your healthcare facility as Central Admin.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
@@ -344,15 +346,6 @@ export const HospitalExplorer: React.FC<HospitalExplorerProps> = ({
                 className="px-4 py-2.5 rounded-xl bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 shadow-sm cursor-pointer"
               >
                 + Register First Hospital (Admin)
-              </button>
-              <button
-                onClick={async () => {
-                  await api.seedDemoData();
-                  onHospitalAdded?.();
-                }}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 border border-slate-300 cursor-pointer"
-              >
-                ⚡ Load Sample Demo Data
               </button>
             </div>
           </div>
@@ -505,7 +498,7 @@ export const HospitalExplorer: React.FC<HospitalExplorerProps> = ({
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search Dr. Ramesh, Pulmonology..."
+              placeholder="Search doctor by name, specialty, or department..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-full pl-9 pr-4 py-2 text-xs rounded-xl border transition-all ${
@@ -539,10 +532,11 @@ export const HospitalExplorer: React.FC<HospitalExplorerProps> = ({
               const docHospital = hospitals.find((h) => h.id === doc.hospitalId);
               const docDept = departments.find((d) => d.id === doc.departmentId);
 
-              // Calculate booked status (Dr. Ramesh has 14 booked in seed data!)
-              const isDrRamesh = doc.id === 'doc-1';
-              const bookedSlotsCount = isDrRamesh ? 14 : 2;
-              const remainingSlots = doc.maxPatientsPerDay - bookedSlotsCount;
+              // Calculate real booked count dynamically from appointments
+              const bookedSlotsCount = appointments.filter(
+                (a) => (a.doctorId === doc.id || a.doctorName.toLowerCase().includes(doc.name.toLowerCase())) && a.status !== 'Cancelled'
+              ).length;
+              const remainingSlots = Math.max(0, doc.maxPatientsPerDay - bookedSlotsCount);
 
               return (
                 <div
