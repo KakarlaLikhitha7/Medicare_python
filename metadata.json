@@ -1,0 +1,6 @@
+{
+  "name": "MediCare - Doctor Appointment & Scheduling System",
+  "description": "Comprehensive doctor appointment system with 16-slot daily workload management, Gemini AI symptom triage, hospital hierarchy, patient health records, prescriptions, and billing chat.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
