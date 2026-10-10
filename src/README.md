@@ -103,8 +103,8 @@ Builds optimized, minified production assets into the `dist/` folder.
 
 ## 💡 Frequently Asked Questions
 
-### Q1: Is the "⚡ Instant 1-Click Role Switcher" just for testing?
-**Yes.** The 1-click role switcher in the Login modal is a development and testing accelerator. It allows developers, evaluators, and reviewers to instantly simulate different roles (Patient, Hospital Desk, Doctor, Central Admin) in one click without manually typing credentials. In production, users authenticate with their single assigned login credentials.
+### Q1: How do users access the system?
+Each user registers and signs in with their assigned role (Patient, Hospital Desk, Doctor, or Central Admin). The system validates credentials against the database and restricts workspace access to only that verified role at a time. To switch roles, users log out and sign in with their alternate role credentials.
 
 ### Q2: Do nurses need to register separately for the Hospital Desk?
 **No.** Nurses and front desk receptionists operate collaboratively under the **Hospital Login**. Hospital personnel share or are provisioned institutional credentials for their respective facility. This centralizes patient triage, appointment scheduling, and vitals recording at the hospital desk level without requiring individual nurse accounts to be registered independently.

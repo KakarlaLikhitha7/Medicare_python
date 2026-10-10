@@ -6,6 +6,20 @@
 CREATE DATABASE IF NOT EXISTS doctor_appointment_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE doctor_appointment_db;
 
+-- 0. USERS (Authentication & Role Verification)
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'hospital', 'doctor', 'patient') NOT NULL,
+    phone VARCHAR(25),
+    doctor_id VARCHAR(36),
+    patient_id VARCHAR(36),
+    hospital_id VARCHAR(36),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 1. HOSPITALS (Hierarchy: Nearest Hospitals)
 CREATE TABLE IF NOT EXISTS hospitals (
     id VARCHAR(36) PRIMARY KEY,

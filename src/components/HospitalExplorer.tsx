@@ -3,6 +3,7 @@ import {
   Hospital,
   Department,
   Doctor,
+  Appointment,
 } from '../types';
 import {
   MapPin,

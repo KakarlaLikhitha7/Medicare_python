@@ -334,15 +334,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* User Session / Login / Logout */}
             {currentUser ? (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <div
-                  onClick={onOpenAuth}
-                  className={`flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-xl cursor-pointer border transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
                     highContrast
-                      ? 'border-yellow-400 bg-neutral-900 text-white hover:bg-neutral-800'
-                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                      ? 'border-yellow-400 bg-neutral-900 text-white'
+                      : 'border-slate-200 bg-slate-50'
                   }`}
-                  title="Switch Role or View Profile"
                 >
                   <div className="text-left">
                     <div className="text-xs font-bold leading-none">{currentUser.name}</div>
@@ -356,7 +354,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                         : 'Patient'}
                     </div>
                   </div>
-                  <LogIn className="w-3.5 h-3.5 text-slate-400" />
                 </div>
 
                 {onLogout && (

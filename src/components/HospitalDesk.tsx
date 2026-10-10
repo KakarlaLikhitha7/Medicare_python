@@ -942,7 +942,7 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                     required
                     value={newPatientName}
                     onChange={(e) => setNewPatientName(e.target.value)}
-                    placeholder="e.g. Ramesh Patil"
+                    placeholder="Enter Patient Full Name"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
                   />
                 </div>
@@ -954,7 +954,7 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                     required
                     value={newPatientPhone}
                     onChange={(e) => setNewPatientPhone(e.target.value)}
-                    placeholder="e.g. 9876543210"
+                    placeholder="Enter phone number"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
                   />
                 </div>
@@ -967,6 +967,7 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                     max="120"
                     value={newPatientAge}
                     onChange={(e) => setNewPatientAge(e.target.value)}
+                    placeholder="Age"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
                   />
                 </div>
@@ -977,7 +978,7 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                     type="text"
                     value={newPatientDisease}
                     onChange={(e) => setNewPatientDisease(e.target.value)}
-                    placeholder="e.g. Severe Persistent Cough, Fever"
+                    placeholder="Chief symptoms or complaints"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
                   />
                 </div>
@@ -988,7 +989,7 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                     type="text"
                     value={newPatientAddress}
                     onChange={(e) => setNewPatientAddress(e.target.value)}
-                    placeholder="e.g. Kothrud, Pune"
+                    placeholder="Patient address"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
                   />
                 </div>
@@ -999,7 +1000,7 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                     type="text"
                     value={newNotes}
                     onChange={(e) => setNewNotes(e.target.value)}
-                    placeholder="e.g. Walk-in patient, paid cash consultation fee"
+                    placeholder="Reception notes (optional)"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 bg-white"
                   />
                 </div>

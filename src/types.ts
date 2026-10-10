@@ -123,6 +123,8 @@ export interface Bill {
   status: 'Paid' | 'Pending' | 'Insurance Claimed';
 }
 
+export type BillRecord = Bill;
+
 export interface TriageResult {
   recommendedDepartment: string;
   recommendedSpecialist: string;

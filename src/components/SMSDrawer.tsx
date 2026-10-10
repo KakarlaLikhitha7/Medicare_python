@@ -27,8 +27,8 @@ export const SMSDrawer: React.FC<SMSDrawerProps> = ({
   onRefreshLogs,
   highContrast,
 }) => {
-  const [testPhone, setTestPhone] = useState('9876543210');
-  const [testPatient, setTestPatient] = useState('Kamlesh');
+  const [testPhone, setTestPhone] = useState('');
+  const [testPatient, setTestPatient] = useState('');
   const [testType, setTestType] = useState('REMINDER_24H');
   const [sentNotice, setSentNotice] = useState(false);
 
@@ -36,11 +36,12 @@ export const SMSDrawer: React.FC<SMSDrawerProps> = ({
 
   const handleSendTestSMS = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!testPhone.trim()) return;
     try {
       const msg =
         testType === 'REMINDER_24H'
-          ? `MediCare Reminder: Dear ${testPatient}, your consultation with Dr. Ramesh is scheduled for tomorrow at 09:00 AM at City Care General Hospital. Reply CONFIRM or call 108 for emergency.`
-          : `MediCare Urgent Alert: Your appointment is in 2 hours with Dr. Ramesh at Cabin 204. Please arrive 15 mins prior.`;
+          ? `MediCare Reminder: Dear ${testPatient || 'Patient'}, your appointment consultation is scheduled for tomorrow. Please arrive 15 mins prior to your slot.`
+          : `MediCare Urgent Alert: Dear ${testPatient || 'Patient'}, your medical appointment is today. Please report to the reception desk.`;
 
       await api.sendSMS({
         toPhone: testPhone,

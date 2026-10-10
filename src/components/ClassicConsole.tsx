@@ -57,17 +57,17 @@ export const ClassicConsole: React.FC<ClassicConsoleProps> = ({
 
   // Screen 1: New Appointment State
   const [newName, setNewName] = useState('');
-  const [newAge, setNewAge] = useState<string>('30');
+  const [newAge, setNewAge] = useState<string>('');
   const [newPhone, setNewPhone] = useState('');
-  const [newDisease, setNewDisease] = useState('COVID-19');
-  const [newAddress, setNewAddress] = useState('Pune');
-  const [newDoctorName, setNewDoctorName] = useState('Dr. Ramesh');
-  const [newSlot, setNewSlot] = useState('09:00');
+  const [newDisease, setNewDisease] = useState('');
+  const [newAddress, setNewAddress] = useState('');
+  const [newDoctorName, setNewDoctorName] = useState(doctors[0]?.name || '');
+  const [newSlot, setNewSlot] = useState('');
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [formMsg, setFormMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Screen 4: Update Appointment State
-  const [searchApptId, setSearchApptId] = useState('2');
+  const [searchApptId, setSearchApptId] = useState('');
   const [foundRecord, setFoundRecord] = useState<Appointment | null>(null);
   const [upName, setUpName] = useState('');
   const [upAge, setUpAge] = useState<string>('');
@@ -367,7 +367,7 @@ export const ClassicConsole: React.FC<ClassicConsoleProps> = ({
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Kamlesh"
+                      placeholder="Enter Patient Name"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       className="flex-1 px-3 py-1.5 border border-slate-400 bg-white rounded-none focus:outline-emerald-600"
@@ -378,6 +378,7 @@ export const ClassicConsole: React.FC<ClassicConsoleProps> = ({
                     <label className="w-32 font-bold text-slate-700">Patient Age</label>
                     <input
                       type="number"
+                      placeholder="Age"
                       value={newAge}
                       onChange={(e) => setNewAge(e.target.value)}
                       className="flex-1 px-3 py-1.5 border border-slate-400 bg-white rounded-none focus:outline-emerald-600"
@@ -389,7 +390,7 @@ export const ClassicConsole: React.FC<ClassicConsoleProps> = ({
                     <input
                       type="text"
                       required
-                      placeholder="e.g. 9876543210"
+                      placeholder="Enter phone number"
                       value={newPhone}
                       onChange={(e) => setNewPhone(e.target.value)}
                       className="flex-1 px-3 py-1.5 border border-slate-400 bg-white rounded-none focus:outline-emerald-600"
@@ -402,7 +403,7 @@ export const ClassicConsole: React.FC<ClassicConsoleProps> = ({
                       type="text"
                       value={newDisease}
                       onChange={(e) => setNewDisease(e.target.value)}
-                      placeholder="e.g. COVID-19"
+                      placeholder="Enter symptoms or disease"
                       className="flex-1 px-3 py-1.5 border border-slate-400 bg-white rounded-none focus:outline-emerald-600"
                     />
                   </div>
@@ -413,7 +414,7 @@ export const ClassicConsole: React.FC<ClassicConsoleProps> = ({
                       type="text"
                       value={newAddress}
                       onChange={(e) => setNewAddress(e.target.value)}
-                      placeholder="e.g. Camp, Pune"
+                      placeholder="Enter address"
                       className="flex-1 px-3 py-1.5 border border-slate-400 bg-white rounded-none focus:outline-emerald-600"
                     />
                   </div>
@@ -581,7 +582,7 @@ export const ClassicConsole: React.FC<ClassicConsoleProps> = ({
                   type="text"
                   value={searchApptId}
                   onChange={(e) => setSearchApptId(e.target.value)}
-                  placeholder="2"
+                  placeholder="Enter ID"
                   className="w-48 px-3 py-1.5 border border-slate-400 bg-white text-center font-bold text-sm focus:outline-emerald-600"
                 />
               </div>

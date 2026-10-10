@@ -89,7 +89,7 @@ export const BillingChatModal: React.FC<BillingChatModalProps> = ({
         ...prev,
         {
           sender: 'staff',
-          text: 'Our billing desk is available at Desk 4 on the Ground Floor or at +91 20 2567 8900. Consultation for Dr. Ramesh is ₹600 with direct cashless insurance processing.',
+          text: 'Our billing desk is available at the reception counter. We support direct cashless insurance claims with instant claim processing.',
           time: 'Just now',
         },
       ]);
@@ -221,9 +221,9 @@ export const BillingChatModal: React.FC<BillingChatModalProps> = ({
         {/* Quick Suggestion Chips */}
         <div className="px-4 py-2 border-t border-slate-200 bg-white flex flex-wrap gap-1.5 shrink-0">
           {[
-            'How much is consultation fee for Dr. Ramesh?',
-            'Do you accept cashless Star Health insurance?',
-            'Can I get an itemized bill for my visit?',
+            'How much is the specialist consultation fee?',
+            'Do you accept cashless health insurance TPAs?',
+            'Can I get an itemized invoice for my visit?',
             'What payment modes are accepted?',
           ].map((prompt, i) => (
             <button

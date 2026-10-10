@@ -104,6 +104,27 @@ class BillingMessage(BaseModel):
     message: str
     patient_name: Optional[str] = "Patient"
 
+class UserRegister(BaseModel):
+    role: str
+    name: str
+    email: str
+    password: str
+    phone: Optional[str] = ""
+    hospital_id: Optional[str] = None
+    department_id: Optional[str] = None
+    specialization: Optional[str] = None
+    qualification: Optional[str] = None
+    fee: Optional[float] = 500.0
+    cabin: Optional[str] = None
+    age: Optional[int] = 30
+    blood_group: Optional[str] = "O+"
+    address: Optional[str] = ""
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+    role: Optional[str] = None
+
 
 @app.get("/")
 def root():
@@ -112,6 +133,116 @@ def root():
         "status": "online",
         "mode": "100% Data-Driven (Strictly MySQL database rows)",
         "workload_policy": "Strict 16-slots workday workload cap (09:00 - 17:00, 30 min per slot)"
+    }
+
+# -------------------------------------------------------------
+# 0. AUTHENTICATION (Verified against MySQL table `users`)
+# -------------------------------------------------------------
+@app.post("/api/auth/register")
+def register_user(payload: UserRegister):
+    clean_email = payload.email.strip().lower()
+    user_id = f"usr-{int(datetime.now().timestamp())}"
+    doctor_id = None
+    patient_id = None
+
+    try:
+        conn = database.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Check existing user
+        cursor.execute("SELECT id FROM users WHERE LOWER(email) = %s", (clean_email,))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=400, detail="An account with this email is already registered.")
+
+        # Doctor creation
+        if payload.role == "doctor":
+            doctor_id = f"doc-{int(datetime.now().timestamp())}"
+            doc_name = payload.name if payload.name.startswith("Dr. ") else f"Dr. {payload.name}"
+            cursor.execute(
+                """
+                INSERT INTO doctors (id, hospital_id, department_id, name, specialization, qualification, consultation_fee, cabin, phone, email, max_patients_per_day)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 16)
+                """,
+                (doctor_id, payload.hospital_id or "", payload.department_id or "", doc_name, payload.specialization or "General Specialist", payload.qualification or "MBBS", payload.fee or 500.0, payload.cabin or "Room 101", payload.phone, clean_email)
+            )
+
+        # Patient creation
+        if payload.role == "patient":
+            patient_id = f"pat-{int(datetime.now().timestamp())}"
+            cursor.execute(
+                """
+                INSERT INTO patients (id, name, age, phone, email, address, blood_group)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (patient_id, payload.name, payload.age or 30, payload.phone, clean_email, payload.address or "", payload.blood_group or "O+")
+            )
+
+        # Insert user
+        cursor.execute(
+            """
+            INSERT INTO users (id, name, email, password, role, phone, doctor_id, patient_id, hospital_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (user_id, payload.name, clean_email, payload.password, payload.role, payload.phone, doctor_id, patient_id, payload.hospital_id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error during registration: {e}")
+
+    return {
+        "message": "Account registered successfully!",
+        "user": {
+            "id": user_id,
+            "name": payload.name,
+            "email": clean_email,
+            "phone": payload.phone,
+            "role": payload.role,
+            "doctorId": doctor_id,
+            "patientId": patient_id,
+            "hospitalId": payload.hospital_id
+        }
+    }
+
+@app.post("/api/auth/login")
+def login_user(payload: UserLogin):
+    clean_email = payload.email.strip().lower()
+    try:
+        conn = database.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE LOWER(email) = %s", (clean_email,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database connection error: {e}")
+
+    if not user:
+        raise HTTPException(status_code=401, detail="No registered account found with this email. Please register your account first.")
+
+    if user["password"] != payload.password:
+        raise HTTPException(status_code=401, detail="Incorrect password. Please verify and try again.")
+
+    if payload.role and user["role"] != payload.role:
+        raise HTTPException(status_code=401, detail=f"This account is registered as '{user['role'].upper()}'. Please switch to the {user['role']} login tab.")
+
+    return {
+        "message": "Login successful",
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "phone": user["phone"],
+            "role": user["role"],
+            "doctorId": user["doctor_id"],
+            "patientId": user["patient_id"],
+            "hospitalId": user["hospital_id"]
+        }
     }
 
 # -------------------------------------------------------------

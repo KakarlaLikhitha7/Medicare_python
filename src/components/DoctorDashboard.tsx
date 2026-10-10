@@ -31,9 +31,9 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   onRefreshAppointments,
   highContrast,
 }) => {
-  // If user is a doctor, select that doctor; otherwise default to Dr. Ramesh
+  // Select logged in doctor or first doctor from database
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(
-    currentUser.doctorId || doctors[0]?.id || 'doc-1'
+    currentUser.doctorId || doctors[0]?.id || ''
   );
 
   const activeDoctor = doctors.find((d) => d.id === selectedDoctorId) || doctors[0];
@@ -56,10 +56,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [prescribeAppt, setPrescribeAppt] = useState<Appointment | null>(null);
   const [diagnosis, setDiagnosis] = useState('');
   const [symptoms, setSymptoms] = useState('');
-  const [meds, setMeds] = useState([
-    { name: 'Tab. Paracetamol 650mg', dosage: '1 tablet thrice daily', timing: 'After Food', duration: '3 days' },
-  ]);
-  const [advice, setAdvice] = useState('Drink warm fluids, steam inhalation, and monitor vitals.');
+  const [meds, setMeds] = useState<{ name: string; dosage: string; timing: string; duration: string }[]>([]);
+  const [advice, setAdvice] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [issuing, setIssuing] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');

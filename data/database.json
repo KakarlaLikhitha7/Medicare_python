@@ -1,0 +1,61 @@
+{
+  "users": [],
+  "hospitals": [],
+  "departments": [
+    {
+      "id": "dept-1",
+      "name": "Pulmonology & Respiratory Care",
+      "description": "Expert care for respiratory disorders, viral pneumonia, COVID-19 & asthma.",
+      "icon": "Stethoscope",
+      "hospitalIds": []
+    },
+    {
+      "id": "dept-2",
+      "name": "Cardiology",
+      "description": "Comprehensive heart care, coronary diagnostics, hypertension and ECG monitoring.",
+      "icon": "HeartPulse",
+      "hospitalIds": []
+    },
+    {
+      "id": "dept-3",
+      "name": "General Medicine & Infectious Diseases",
+      "description": "Primary care, viral fever management, diabetes, infections and general wellness.",
+      "icon": "Activity",
+      "hospitalIds": []
+    },
+    {
+      "id": "dept-4",
+      "name": "Pediatrics",
+      "description": "Specialized healthcare for infants, children, immunization and child development.",
+      "icon": "Baby",
+      "hospitalIds": []
+    },
+    {
+      "id": "dept-5",
+      "name": "Orthopedics & Joint Care",
+      "description": "Bone fractures, arthritis, joint replacements and musculoskeletal therapy.",
+      "icon": "Bone",
+      "hospitalIds": []
+    },
+    {
+      "id": "dept-6",
+      "name": "Neurology & Brain Sciences",
+      "description": "Diagnosis and care for chronic migraines, epilepsy, nerve disorders and stroke.",
+      "icon": "Brain",
+      "hospitalIds": []
+    },
+    {
+      "id": "dept-7",
+      "name": "Dermatology & Skin Health",
+      "description": "Skin allergies, eczema, acne solutions, cosmetic dermatology and biopsy.",
+      "icon": "Sparkles",
+      "hospitalIds": []
+    }
+  ],
+  "doctors": [],
+  "appointments": [],
+  "patients": [],
+  "prescriptions": [],
+  "bills": [],
+  "sms_logs": []
+}

@@ -265,4 +265,55 @@ export const api = {
     });
     return res.json();
   },
+
+  // Authentication (100% Verified DB Check)
+  async login(payload: {
+    email: string;
+    password: string;
+    role: string;
+  }): Promise<{ message: string; user: import('../types').UserSession }> {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Login failed. Please verify credentials.');
+    }
+    return json;
+  },
+
+  async register(
+    data: Record<string, any>
+  ): Promise<{ message: string; user: import('../types').UserSession }> {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Registration failed.');
+    }
+    return json;
+  },
+
+  async getSystemStatus(): Promise<{
+    databaseType: string;
+    hospitalsCount: number;
+    doctorsCount: number;
+    appointmentsCount: number;
+    patientsCount: number;
+    usersCount: number;
+  }> {
+    const res = await fetch('/api/system/status');
+    return res.json();
+  },
+
+  async clearDb(): Promise<{ message: string }> {
+    const res = await fetch('/api/admin/clear-db', { method: 'POST' });
+    return res.json();
+  },
 };
+
