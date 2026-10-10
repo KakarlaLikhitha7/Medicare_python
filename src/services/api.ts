@@ -48,6 +48,22 @@ export const api = {
     return res.json();
   },
 
+  async createDepartment(data: Partial<Department>): Promise<{ message: string; department: Department }> {
+    const res = await fetch('/api/departments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Failed to add department');
+    return json;
+  },
+
+  async getDbStatus(): Promise<{ connected: boolean; host?: string; database?: string; tables?: Record<string, number>; error?: string }> {
+    const res = await fetch('/api/db-status');
+    return res.json();
+  },
+
   async getDoctors(hospitalId?: string, departmentId?: string): Promise<Doctor[]> {
     const params = new URLSearchParams();
     if (hospitalId) params.append('hospitalId', hospitalId);

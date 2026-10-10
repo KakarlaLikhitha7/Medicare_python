@@ -114,7 +114,11 @@ export const HospitalExplorer: React.FC<HospitalExplorerProps> = ({
 
   // Departments available in selected hospital
   const availableDepartments = selectedHospitalId
-    ? departments.filter((d) => d.hospitalIds.includes(selectedHospitalId))
+    ? departments.filter(
+        (d) =>
+          d.hospitalIds?.includes(selectedHospitalId) ||
+          activeHospital?.departments?.includes(d.id)
+      )
     : departments;
 
   // Doctors in selected department and hospital

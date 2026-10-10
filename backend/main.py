@@ -158,14 +158,34 @@ def register_user(payload: UserRegister):
 
         # Doctor creation
         if payload.role == "doctor":
+            if not payload.hospital_id or not payload.department_id:
+                raise HTTPException(status_code=400, detail="Affiliated Hospital and Department are required for Doctor registration.")
             doctor_id = f"doc-{int(datetime.now().timestamp())}"
             doc_name = payload.name if payload.name.startswith("Dr. ") else f"Dr. {payload.name}"
+            # Ensure department exists in departments table
+            cursor.execute(
+                """
+                INSERT INTO departments (id, name, description, icon)
+                VALUES (%s, %s, '', 'Stethoscope')
+                ON DUPLICATE KEY UPDATE name=VALUES(name)
+                """,
+                (payload.department_id, payload.specialization or payload.department_id)
+            )
             cursor.execute(
                 """
                 INSERT INTO doctors (id, hospital_id, department_id, name, specialization, qualification, consultation_fee, cabin, phone, email, max_patients_per_day)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 16)
+                ON DUPLICATE KEY UPDATE name=VALUES(name), specialization=VALUES(specialization), qualification=VALUES(qualification)
                 """,
-                (doctor_id, payload.hospital_id or "", payload.department_id or "", doc_name, payload.specialization or "General Specialist", payload.qualification or "MBBS", payload.fee or 500.0, payload.cabin or "Room 101", payload.phone, clean_email)
+                (doctor_id, payload.hospital_id, payload.department_id, doc_name, payload.specialization or "General Specialist", payload.qualification or "MBBS", payload.fee or 500.0, payload.cabin or "Room 101", payload.phone, clean_email)
+            )
+            cursor.execute(
+                """
+                INSERT INTO hospital_departments (hospital_id, department_id)
+                VALUES (%s, %s)
+                ON DUPLICATE KEY UPDATE hospital_id=VALUES(hospital_id)
+                """,
+                (payload.hospital_id, payload.department_id)
             )
 
         # Patient creation
@@ -287,7 +307,15 @@ def create_hospital(payload: HospitalCreate):
         if payload.departments:
             for dept_id in payload.departments:
                 cursor.execute(
-                    "INSERT INTO hospital_departments (hospital_id, department_id) VALUES (%s, %s) ON DUPLICATE KEY UPDATE hospital_id=hospital_id",
+                    """
+                    INSERT INTO departments (id, name, description, icon)
+                    VALUES (%s, %s, '', 'Stethoscope')
+                    ON DUPLICATE KEY UPDATE name=VALUES(name)
+                    """,
+                    (dept_id, dept_id)
+                )
+                cursor.execute(
+                    "INSERT INTO hospital_departments (hospital_id, department_id) VALUES (%s, %s) ON DUPLICATE KEY UPDATE hospital_id=VALUES(hospital_id)",
                     (new_id, dept_id)
                 )
         conn.commit()

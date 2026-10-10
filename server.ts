@@ -97,12 +97,17 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
 
     // Doctor Registration: creates unique Doctor Record in DB
     if (role === 'doctor') {
+      if (!hospitalId || !departmentId) {
+        return res.status(400).json({
+          error: 'Affiliated Hospital and Medical Department are required to register a Doctor.',
+        });
+      }
       doctorId = `doc-${Date.now()}`;
       const docName = name.trim().startsWith('Dr. ') ? name.trim() : `Dr. ${name.trim()}`;
       const newDoc: Doctor = {
         id: doctorId,
-        hospitalId: hospitalId || '',
-        departmentId: departmentId || '',
+        hospitalId: String(hospitalId).trim(),
+        departmentId: String(departmentId).trim(),
         name: docName,
         specialization: specialization?.trim() || 'General Specialist',
         qualification: qualification?.trim() || 'MBBS',
@@ -299,9 +304,40 @@ app.delete('/api/hospitals/:id', async (req: Request, res: Response) => {
   res.json({ message: 'Hospital removed successfully' });
 });
 
+// Database Status (Reports live MySQL tables and connection)
+app.get('/api/db-status', async (_req: Request, res: Response) => {
+  try {
+    const status = await db.getDatabaseStatus();
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Error checking DB status' });
+  }
+});
+
 // Departments
 app.get('/api/departments', (_req: Request, res: Response) => {
   res.json(db.getDepartments());
+});
+
+app.post('/api/departments', async (req: Request, res: Response) => {
+  try {
+    const { id, name, description, icon } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Department Name is required.' });
+    }
+    const deptId = id?.trim() || 'dept-' + Date.now();
+    const newDept = {
+      id: deptId,
+      name: name.trim(),
+      description: description?.trim() || '',
+      icon: icon?.trim() || 'Stethoscope',
+      hospitalIds: [],
+    };
+    await db.addDepartment(newDept);
+    res.status(201).json({ message: 'Department created in MySQL successfully', department: newDept });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Error creating department' });
+  }
 });
 
 // Doctors

@@ -42,6 +42,17 @@ CREATE TABLE IF NOT EXISTS departments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Pre-seed Medical Departments (Mandatory for foreign key constraints in hospital_departments and doctors)
+INSERT INTO departments (id, name, description, icon) VALUES
+('dept-1', 'Pulmonology & Respiratory Care', 'Expert care for respiratory disorders, viral pneumonia, COVID-19 & asthma.', 'Stethoscope'),
+('dept-2', 'Cardiology', 'Comprehensive heart care, coronary diagnostics, hypertension and ECG monitoring.', 'HeartPulse'),
+('dept-3', 'General Medicine & Infectious Diseases', 'Primary care, viral fever management, diabetes, infections and general wellness.', 'Activity'),
+('dept-4', 'Pediatrics', 'Specialized healthcare for infants, children, immunization and child development.', 'Baby'),
+('dept-5', 'Orthopedics & Joint Care', 'Bone fractures, arthritis, joint replacements and musculoskeletal therapy.', 'Bone'),
+('dept-6', 'Neurology & Brain Sciences', 'Diagnosis and care for chronic migraines, epilepsy, nerve disorders and stroke.', 'Brain'),
+('dept-7', 'Dermatology & Skin Health', 'Skin allergies, eczema, acne solutions, cosmetic dermatology and biopsy.', 'Sparkles')
+ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), icon=VALUES(icon);
+
 -- Hospital to Department mapping
 CREATE TABLE IF NOT EXISTS hospital_departments (
     hospital_id VARCHAR(36),
