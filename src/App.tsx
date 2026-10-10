@@ -34,8 +34,31 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  // Navigation & View state
-  const [currentTab, setCurrentTab] = useState<string>('landing');
+  // Active User Session: Read from localStorage on mount so session is never lost
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
+    try {
+      const saved = localStorage.getItem('medicare_user_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Navigation & View state - routes directly to role dashboard if logged in
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('medicare_user_session');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u.role === 'admin') return 'admin';
+        if (u.role === 'hospital' || u.role === 'nurse') return 'hospital';
+        if (u.role === 'doctor') return 'doctor';
+        return 'patient';
+      }
+    } catch {}
+    return 'landing';
+  });
+
   const [highContrast, setHighContrast] = useState<boolean>(false);
 
   // Core Data
@@ -51,8 +74,6 @@ export default function App() {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
 
-  // Active User Session: Defaults to null. Single role login at a time.
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [authRole, setAuthRole] = useState<'patient' | 'hospital' | 'doctor' | 'admin'>('patient');
   const [authIsSignUp, setAuthIsSignUp] = useState<boolean>(false);
 
@@ -95,6 +116,15 @@ export default function App() {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  // Sync currentUser with localStorage so sessions stay persistent across actions
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('medicare_user_session', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('medicare_user_session');
+    }
+  }, [currentUser]);
 
   const handleBookingSuccess = (newAppt: Appointment, smsText?: string) => {
     setBookingDoctor(null);

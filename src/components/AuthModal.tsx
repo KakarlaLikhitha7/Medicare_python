@@ -121,7 +121,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         };
 
         const res = await api.register(payload);
-        if (role === 'doctor' && onDoctorRegistered) {
+        if (onDoctorRegistered) {
           onDoctorRegistered();
         }
         onLoginSuccess(res.user);

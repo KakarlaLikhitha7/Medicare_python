@@ -713,6 +713,21 @@ export const db = {
     return state.appointments[idx];
   },
 
+  async deleteAppointment(id: number): Promise<boolean> {
+    const idx = state.appointments.findIndex((a) => a.id === id);
+    if (idx === -1) return false;
+    state.appointments.splice(idx, 1);
+    saveStateToFile();
+    if (useMySQL && mysqlPool) {
+      try {
+        await mysqlPool.query(`DELETE FROM appointments WHERE id = ?`, [id]);
+      } catch (e) {
+        console.warn('[DB] MySQL deleteAppointment error:', e);
+      }
+    }
+    return true;
+  },
+
   getPatients: () => state.patients,
   findPatientById: (id: string) => state.patients.find((p) => p.id === id),
 
@@ -774,6 +789,22 @@ export const db = {
       }
     }
     return state.patients[idx];
+  },
+
+  async addPatientHealthNote(patientId: string, noteData: { note: string; recordedBy: string; role: string }): Promise<any> {
+    const patient = state.patients.find((p) => p.id === patientId);
+    if (!patient) return null;
+    if (!patient.healthNotes) patient.healthNotes = [];
+    const note = {
+      id: `note-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      note: noteData.note,
+      recordedBy: noteData.recordedBy,
+      role: noteData.role,
+    };
+    patient.healthNotes.unshift(note);
+    saveStateToFile();
+    return { note, patient };
   },
 
   getPrescriptions: () => state.prescriptions,
