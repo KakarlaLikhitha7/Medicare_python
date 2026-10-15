@@ -162,13 +162,15 @@ export const api = {
     return res.json();
   },
 
-  async createPrescription(data: Partial<Prescription>): Promise<Prescription> {
+  async createPrescription(data: Partial<Prescription>): Promise<any> {
     const res = await fetch('/api/prescriptions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    return res.json();
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Failed to issue prescription to database');
+    return json;
   },
 
   async getSMSLogs(): Promise<SMSLog[]> {
@@ -199,6 +201,19 @@ export const api = {
   async getPatients(): Promise<import('../types').PatientRecord[]> {
     const res = await fetch('/api/patients');
     return res.json();
+  },
+
+  async createPatient(
+    data: Partial<import('../types').PatientRecord>
+  ): Promise<{ message: string; patient: import('../types').PatientRecord }> {
+    const res = await fetch('/api/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Failed to register patient record in database');
+    return json;
   },
 
   async getPatientById(id: string): Promise<import('../types').PatientRecord> {

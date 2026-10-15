@@ -74,13 +74,12 @@ export const PatientPortal: React.FC<PatientPortalProps> = ({
     try {
       setLoadingPatient(true);
       const allPatients = await api.getPatients();
-      const match =
-        allPatients.find(
-          (p) =>
-            p.id === currentUser.patientId ||
-            p.name.toLowerCase() === currentUser.name.toLowerCase() ||
-            p.phone === currentUser.phone
-        ) || allPatients[0];
+      const match = allPatients.find(
+        (p) =>
+          p.id === currentUser.patientId ||
+          p.name.toLowerCase() === currentUser.name.toLowerCase() ||
+          (currentUser.phone && p.phone === currentUser.phone)
+      );
 
       if (match) {
         setPatientRecord(match);
@@ -93,7 +92,7 @@ export const PatientPortal: React.FC<PatientPortalProps> = ({
             temp: match.vitals.temp || '98.4 °F',
             weight: match.vitals.weight || '68 kg',
             respirationRate: match.vitals.respirationRate || '16 breaths/min',
-            recordedBy: match.vitals.recordedBy || 'Nurse Priya (City Care General Hospital)',
+            recordedBy: match.vitals.recordedBy || 'OPD Reception / Staff Nurse',
             lastUpdated: match.vitals.lastUpdated || 'Today',
           });
         }
@@ -106,6 +105,8 @@ export const PatientPortal: React.FC<PatientPortalProps> = ({
         if (Array.isArray(match.healthNotes)) {
           setHealthNotes(match.healthNotes);
         }
+      } else {
+        setPatientRecord(null);
       }
     } catch (err) {
       console.error('Failed to load patient EHR records:', err);
@@ -122,9 +123,24 @@ export const PatientPortal: React.FC<PatientPortalProps> = ({
   const patientAppointments = appointments.filter(
     (a) =>
       a.patientName.toLowerCase() === currentUser.name.toLowerCase() ||
-      a.patientPhone === currentUser.phone ||
+      (currentUser.phone && a.patientPhone === currentUser.phone) ||
+      (currentUser.patientId && a.patientId === currentUser.patientId) ||
       currentUser.role === 'admin'
   );
+
+  // Filter prescriptions for current patient
+  const patientPrescriptions = prescriptions.filter(
+    (rx) =>
+      currentUser.role === 'admin' ||
+      rx.patientName.toLowerCase() === currentUser.name.toLowerCase() ||
+      patientAppointments.some((a) => a.id === rx.appointmentId)
+  );
+
+  useEffect(() => {
+    if (patientPrescriptions.length > 0 && (!selectedRx || !patientPrescriptions.some(p => p.id === selectedRx.id))) {
+      setSelectedRx(patientPrescriptions[0]);
+    }
+  }, [patientPrescriptions]);
 
   const handleExplainRx = async (rx: Prescription) => {
     setSelectedRx(rx);
@@ -403,38 +419,60 @@ export const PatientPortal: React.FC<PatientPortalProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Prescription List Column */}
           <div className="lg:col-span-5 space-y-4">
-            <h3 className="font-bold text-sm text-slate-800">Your Doctor Prescriptions</h3>
-            {prescriptions.map((rx) => (
-              <div
-                key={rx.id}
-                onClick={() => handleExplainRx(rx)}
-                className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                  selectedRx?.id === rx.id
-                    ? 'border-emerald-600 bg-emerald-50/70 shadow-md ring-2 ring-emerald-500'
-                    : 'border-slate-200 bg-white hover:border-emerald-300'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                    Rx ID: {rx.id}
-                  </span>
-                  <span className="text-xs text-slate-500 font-semibold">{rx.date}</span>
-                </div>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-slate-800">Your Doctor Prescriptions</h3>
+              <span className="text-xs font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+                {patientPrescriptions.length} Records
+              </span>
+            </div>
 
-                <h4 className="font-extrabold text-sm text-slate-900">{rx.doctorName}</h4>
-                <p className="text-xs font-semibold text-emerald-700">{rx.specialization}</p>
-                <p className="text-xs text-slate-600 mt-1 line-clamp-1">
-                  <strong>Diagnosis:</strong> {rx.diagnosis}
+            {patientPrescriptions.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-3">
+                <Pill className="w-10 h-10 text-slate-300 mx-auto" />
+                <h4 className="font-bold text-sm text-slate-700">No Prescriptions On File Yet</h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  When your attending doctor finishes your consultation and issues a prescription, it will appear here with complete dosage, timing, duration, and AI explainer.
                 </p>
-
-                <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-xs font-semibold text-emerald-700">
-                  <span>{rx.medicines.length} Medicines Prescribed</span>
-                  <span className="flex items-center gap-1">
-                    AI Explain &rarr;
-                  </span>
-                </div>
+                <button
+                  onClick={onBookNewAppointment}
+                  className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs cursor-pointer"
+                >
+                  Book Doctor Consultation
+                </button>
               </div>
-            ))}
+            ) : (
+              patientPrescriptions.map((rx) => (
+                <div
+                  key={rx.id}
+                  onClick={() => handleExplainRx(rx)}
+                  className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+                    selectedRx?.id === rx.id
+                      ? 'border-emerald-600 bg-emerald-50/70 shadow-md ring-2 ring-emerald-500'
+                      : 'border-slate-200 bg-white hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono">
+                      Rx #{rx.id}
+                    </span>
+                    <span className="text-xs text-slate-500 font-semibold">{rx.date}</span>
+                  </div>
+
+                  <h4 className="font-extrabold text-sm text-slate-900">{rx.doctorName}</h4>
+                  <p className="text-xs font-semibold text-emerald-700">{rx.specialization}</p>
+                  <p className="text-xs text-slate-600 mt-1 line-clamp-1">
+                    <strong>Diagnosis:</strong> {rx.diagnosis}
+                  </p>
+
+                  <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-xs font-semibold text-emerald-700">
+                    <span>{rx.medicines?.length || 0} Medicines Prescribed</span>
+                    <span className="flex items-center gap-1">
+                      View Details &rarr;
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Prescription Details & Gemini AI Explanation */}
@@ -595,37 +633,63 @@ export const PatientPortal: React.FC<PatientPortalProps> = ({
           </div>
 
           <div className="space-y-3">
-            {patientAppointments.map((appt) => (
-              <div
-                key={appt.id}
-                className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-sm text-slate-900">
-                      Appointment #{appt.id}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-                      {appt.status}
-                    </span>
+            {patientAppointments.map((appt) => {
+              const matchedRx = patientPrescriptions.find((r) => r.appointmentId === appt.id);
+              return (
+                <div
+                  key={appt.id}
+                  className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-sm text-slate-900">
+                        Appointment #{appt.id}
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          appt.status === 'Completed'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {appt.status}
+                      </span>
+                    </div>
+                    <div className="text-xs font-semibold text-emerald-700">
+                      With {appt.doctorName} &bull; {appt.departmentName}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      Reason: <strong>{appt.patientDisease}</strong> &bull; Hospital: {appt.hospitalName}
+                    </div>
                   </div>
-                  <div className="text-xs font-semibold text-emerald-700">
-                    With {appt.doctorName} &bull; {appt.departmentName}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    Reason: <strong>{appt.patientDisease}</strong> &bull; Hospital: {appt.hospitalName}
-                  </div>
-                </div>
 
-                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center text-xs">
-                  <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{appt.slotTime} ({appt.appointmentDay})</span>
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 text-xs">
+                    <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{appt.slotTime} ({appt.appointmentDay})</span>
+                    </div>
+                    <div className="text-slate-500">{appt.appointmentDate}</div>
+
+                    {(appt.status === 'Completed' || matchedRx) && (
+                      <button
+                        onClick={() => {
+                          if (matchedRx) {
+                            setSelectedRx(matchedRx);
+                          } else if (patientPrescriptions.length > 0) {
+                            setSelectedRx(patientPrescriptions[0]);
+                          }
+                          setActiveTab('prescriptions');
+                        }}
+                        className="mt-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 border border-emerald-300 transition-all cursor-pointer"
+                      >
+                        <Pill className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>View Prescription &rarr;</span>
+                      </button>
+                    )}
                   </div>
-                  <div className="text-slate-500">{appt.appointmentDate}</div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

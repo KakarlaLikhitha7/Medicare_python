@@ -249,6 +249,7 @@ async function setupMySQLSchema(pool: mysql.Pool) {
         email VARCHAR(150),
         address TEXT,
         blood_group VARCHAR(10) DEFAULT 'O+',
+        hospital_id VARCHAR(36),
         bp VARCHAR(25) DEFAULT '120/80 mmHg',
         heart_rate VARCHAR(25) DEFAULT '74 bpm',
         spo2 VARCHAR(25) DEFAULT '98%',
@@ -257,7 +258,20 @@ async function setupMySQLSchema(pool: mysql.Pool) {
         weight VARCHAR(25) DEFAULT '68 kg',
         respiration_rate VARCHAR(25) DEFAULT '16 breaths/min',
         vitals_recorded_by VARCHAR(150) DEFAULT 'Self Registration',
+        chronic_conditions JSON,
+        allergies JSON,
         last_vitals_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS patient_health_notes (
+        id VARCHAR(36) PRIMARY KEY,
+        patient_id VARCHAR(36) NOT NULL,
+        note TEXT NOT NULL,
+        recorded_by VARCHAR(150) NOT NULL,
+        role VARCHAR(50) DEFAULT 'Staff Nurse',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -275,6 +289,8 @@ async function setupMySQLSchema(pool: mysql.Pool) {
         doctor_id VARCHAR(36) NOT NULL,
         doctor_name VARCHAR(150) NOT NULL,
         hospital_id VARCHAR(36),
+        hospital_name VARCHAR(255),
+        department_name VARCHAR(150),
         appointment_date DATE NOT NULL,
         appointment_day VARCHAR(20) NOT NULL,
         slot_time VARCHAR(10) NOT NULL,
@@ -291,8 +307,9 @@ async function setupMySQLSchema(pool: mysql.Pool) {
         patient_name VARCHAR(150),
         doctor_name VARCHAR(150),
         specialization VARCHAR(150),
-        hospital_name VARCHAR(150),
+        hospital_name VARCHAR(255),
         date VARCHAR(20),
+        prescription_date DATE,
         diagnosis TEXT,
         symptoms TEXT,
         medicines JSON,
@@ -331,6 +348,32 @@ async function setupMySQLSchema(pool: mysql.Pool) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Safe column migrations in case tables were previously created without these columns
+    try {
+      await pool.query('ALTER TABLE patients ADD COLUMN hospital_id VARCHAR(36)');
+    } catch {}
+    try {
+      await pool.query('ALTER TABLE patients ADD COLUMN chronic_conditions JSON');
+    } catch {}
+    try {
+      await pool.query('ALTER TABLE patients ADD COLUMN allergies JSON');
+    } catch {}
+    try {
+      await pool.query('ALTER TABLE appointments ADD COLUMN hospital_id VARCHAR(36)');
+    } catch {}
+    try {
+      await pool.query('ALTER TABLE appointments ADD COLUMN hospital_name VARCHAR(255)');
+    } catch {}
+    try {
+      await pool.query('ALTER TABLE appointments ADD COLUMN department_name VARCHAR(150)');
+    } catch {}
+    try {
+      await pool.query('ALTER TABLE prescriptions ADD COLUMN prescription_date DATE');
+    } catch {}
+    try {
+      await pool.query('ALTER TABLE prescriptions ADD COLUMN date VARCHAR(20)');
+    } catch {}
 
     console.log('[DB] MySQL schema setup verified and all standard clinical departments seeded.');
   } catch (err) {
@@ -424,6 +467,8 @@ export async function loadStateFromMySQL(): Promise<void> {
       doctorId: a.doctor_id,
       doctorName: a.doctor_name,
       hospitalId: a.hospital_id,
+      hospitalName: a.hospital_name || (state.hospitals.find((h) => h.id === a.hospital_id)?.name) || 'Hospital Facility',
+      departmentName: a.department_name || '',
       appointmentDate:
         typeof a.appointment_date === 'string'
           ? a.appointment_date
@@ -432,34 +477,66 @@ export async function loadStateFromMySQL(): Promise<void> {
       slotTime: a.slot_time,
       status: a.status,
       notes: a.notes,
+      createdAt: a.created_at ? a.created_at.toString() : new Date().toISOString(),
     }));
 
-    // 6. Patients from MySQL
+    // 6. Patients from MySQL (With full EHR Vitals, Chronic Conditions, and Health Notes)
+    let noteRows: any[] = [];
+    try {
+      const [nRows]: any = await mysqlPool.query('SELECT * FROM patient_health_notes ORDER BY created_at ASC');
+      noteRows = nRows || [];
+    } catch {}
+
     const [patRows]: any = await mysqlPool.query('SELECT * FROM patients ORDER BY created_at DESC');
-    state.patients = patRows.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      age: p.age,
-      gender: p.gender || 'Other',
-      phone: p.phone,
-      email: p.email,
-      address: p.address,
-      bloodGroup: p.blood_group || 'O+',
-      vitals: {
-        bp: p.bp || '120/80 mmHg',
-        heartRate: p.heart_rate || '74 bpm',
-        spo2: p.spo2 || '98%',
-        sugar: p.sugar || '96 mg/dL',
-        temp: p.temp || '98.4 °F',
-        weight: p.weight || '68 kg',
-        respirationRate: p.respiration_rate || '16 breaths/min',
-        lastUpdated: p.last_vitals_updated ? p.last_vitals_updated.toString() : new Date().toISOString(),
-        recordedBy: p.vitals_recorded_by || 'Staff Nurse',
-      },
-      chronicConditions: [],
-      allergies: [],
-      healthNotes: [],
-    }));
+    state.patients = patRows.map((p: any) => {
+      let conds: string[] = [];
+      let allgs: string[] = [];
+      try {
+        conds = typeof p.chronic_conditions === 'string' ? JSON.parse(p.chronic_conditions) : p.chronic_conditions || [];
+      } catch {}
+      try {
+        allgs = typeof p.allergies === 'string' ? JSON.parse(p.allergies) : p.allergies || [];
+      } catch {}
+
+      const pNotes = noteRows
+        .filter((n: any) => n.patient_id === p.id)
+        .map((n: any) => ({
+          id: n.id,
+          date: n.created_at ? new Date(n.created_at).toLocaleString() : new Date().toLocaleString(),
+          note: n.note,
+          recordedBy: n.recorded_by,
+          role: n.role || 'Staff Nurse',
+        }));
+
+      const hospObj = p.hospital_id ? state.hospitals.find((h) => h.id === p.hospital_id) : undefined;
+
+      return {
+        id: p.id,
+        name: p.name,
+        age: p.age,
+        gender: p.gender || 'Other',
+        phone: p.phone,
+        email: p.email,
+        address: p.address,
+        bloodGroup: p.blood_group || 'O+',
+        hospitalId: p.hospital_id || undefined,
+        hospitalName: hospObj?.name,
+        vitals: {
+          bp: p.bp || '120/80 mmHg',
+          heartRate: p.heart_rate || '74 bpm',
+          spo2: p.spo2 || '98%',
+          sugar: p.sugar || '96 mg/dL',
+          temp: p.temp || '98.4 °F',
+          weight: p.weight || '68 kg',
+          respirationRate: p.respiration_rate || '16 breaths/min',
+          lastUpdated: p.last_vitals_updated ? p.last_vitals_updated.toString() : new Date().toISOString(),
+          recordedBy: p.vitals_recorded_by || 'Staff Nurse',
+        },
+        chronicConditions: Array.isArray(conds) ? conds : [],
+        allergies: Array.isArray(allgs) ? allgs : [],
+        healthNotes: pNotes,
+      };
+    });
 
     // 7. Prescriptions from MySQL
     const [rxRows]: any = await mysqlPool.query('SELECT * FROM prescriptions ORDER BY created_at DESC');
@@ -468,14 +545,14 @@ export async function loadStateFromMySQL(): Promise<void> {
       appointmentId: r.appointment_id,
       patientName: r.patient_name,
       doctorName: r.doctor_name,
-      specialization: r.specialization,
-      hospitalName: r.hospital_name,
-      date: r.date,
+      specialization: r.specialization || 'Consultant Physician',
+      hospitalName: r.hospital_name || 'Hospital Facility',
+      date: r.date || (r.prescription_date ? new Date(r.prescription_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
       diagnosis: r.diagnosis,
-      symptoms: r.symptoms,
+      symptoms: r.symptoms || '',
       medicines: typeof r.medicines === 'string' ? JSON.parse(r.medicines) : r.medicines || [],
-      advice: r.advice,
-      followUpDate: r.follow_up_date,
+      advice: r.advice || '',
+      followUpDate: r.follow_up_date ? (typeof r.follow_up_date === 'string' ? r.follow_up_date : new Date(r.follow_up_date).toISOString().split('T')[0]) : '',
     }));
 
     // 8. Bills from MySQL
@@ -783,9 +860,83 @@ export const db = {
 
   async addAppointment(appt: Appointment): Promise<Appointment> {
     const pool = ensureDBConnected();
+
+    // 1. Guarantee patient record exists in MySQL patients table
+    let linkedPatId = appt.patientId;
+    if (!linkedPatId) {
+      const existingPat = state.patients.find(
+        (p) =>
+          (appt.patientPhone && p.phone === appt.patientPhone) ||
+          (p.name.toLowerCase() === appt.patientName.toLowerCase() && p.phone === appt.patientPhone)
+      );
+      if (existingPat) {
+        linkedPatId = existingPat.id;
+      } else {
+        linkedPatId = `pat-${Date.now()}`;
+        const newPatRecord: PatientRecord = {
+          id: linkedPatId,
+          name: appt.patientName,
+          age: appt.patientAge || 30,
+          gender: 'Other',
+          phone: appt.patientPhone,
+          email: '',
+          address: appt.patientAddress || '',
+          bloodGroup: 'O+',
+          hospitalId: appt.hospitalId || undefined,
+          vitals: {
+            bp: '120/80 mmHg',
+            heartRate: '74 bpm',
+            spo2: '98%',
+            sugar: '96 mg/dL',
+            temp: '98.4 °F',
+            weight: '68 kg',
+            respirationRate: '16 breaths/min',
+            lastUpdated: new Date().toISOString(),
+            recordedBy: 'OPD Reception Desk',
+          },
+          chronicConditions: [],
+          allergies: [],
+          healthNotes: [],
+        };
+
+        const hospId = appt.hospitalId && appt.hospitalId.trim() ? appt.hospitalId.trim() : null;
+        await pool.query(
+          `INSERT INTO patients (id, name, age, gender, phone, email, address, blood_group, hospital_id, bp, heart_rate, spo2, sugar, temp, weight, respiration_rate, vitals_recorded_by, chronic_conditions, allergies)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE name=VALUES(name), phone=VALUES(phone)`,
+          [
+            newPatRecord.id,
+            newPatRecord.name,
+            newPatRecord.age,
+            newPatRecord.gender,
+            newPatRecord.phone,
+            null,
+            newPatRecord.address,
+            newPatRecord.bloodGroup,
+            hospId,
+            newPatRecord.vitals.bp,
+            newPatRecord.vitals.heartRate,
+            newPatRecord.vitals.spo2,
+            newPatRecord.vitals.sugar,
+            newPatRecord.vitals.temp,
+            newPatRecord.vitals.weight,
+            newPatRecord.vitals.respirationRate,
+            newPatRecord.vitals.recordedBy,
+            JSON.stringify([]),
+            JSON.stringify([]),
+          ]
+        );
+      }
+    }
+    appt.patientId = linkedPatId;
+
+    const hospObj = appt.hospitalId ? state.hospitals.find((h) => h.id === appt.hospitalId) : undefined;
+    const docObj = appt.doctorId ? state.doctors.find((d) => d.id === appt.doctorId) : undefined;
+    const deptObj = docObj ? state.departments.find((d) => d.id === docObj.departmentId) : undefined;
+
     const [res]: any = await pool.query(
-      `INSERT INTO appointments (sn, patient_id, patient_name, patient_age, patient_phone, patient_disease, patient_address, doctor_id, doctor_name, hospital_id, appointment_date, appointment_day, slot_time, status, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO appointments (sn, patient_id, patient_name, patient_age, patient_phone, patient_disease, patient_address, doctor_id, doctor_name, hospital_id, hospital_name, department_name, appointment_date, appointment_day, slot_time, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         appt.sn,
         appt.patientId || null,
@@ -797,10 +948,12 @@ export const db = {
         appt.doctorId,
         appt.doctorName,
         appt.hospitalId || null,
+        appt.hospitalName || hospObj?.name || 'Hospital Facility',
+        appt.departmentName || deptObj?.name || 'Clinical Care',
         appt.appointmentDate,
         appt.appointmentDay,
         appt.slotTime,
-        appt.status,
+        appt.status || 'Scheduled',
         appt.notes || null,
       ]
     );
@@ -848,10 +1001,31 @@ export const db = {
 
   async addPatient(pat: PatientRecord): Promise<void> {
     const pool = ensureDBConnected();
+    const hospId = pat.hospitalId && pat.hospitalId.trim() ? pat.hospitalId.trim() : null;
+
     await pool.query(
-      `INSERT INTO patients (id, name, age, gender, phone, email, address, blood_group, bp, heart_rate, spo2, sugar, temp, weight, respiration_rate)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE name=VALUES(name), phone=VALUES(phone)`,
+      `INSERT INTO patients (id, name, age, gender, phone, email, address, blood_group, hospital_id, bp, heart_rate, spo2, sugar, temp, weight, respiration_rate, vitals_recorded_by, chronic_conditions, allergies)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+         name=VALUES(name),
+         age=VALUES(age),
+         gender=VALUES(gender),
+         phone=VALUES(phone),
+         email=VALUES(email),
+         address=VALUES(address),
+         blood_group=VALUES(blood_group),
+         hospital_id=COALESCE(VALUES(hospital_id), hospital_id),
+         bp=VALUES(bp),
+         heart_rate=VALUES(heart_rate),
+         spo2=VALUES(spo2),
+         sugar=VALUES(sugar),
+         temp=VALUES(temp),
+         weight=VALUES(weight),
+         respiration_rate=VALUES(respiration_rate),
+         vitals_recorded_by=VALUES(vitals_recorded_by),
+         chronic_conditions=VALUES(chronic_conditions),
+         allergies=VALUES(allergies),
+         last_vitals_updated=CURRENT_TIMESTAMP`,
       [
         pat.id,
         pat.name,
@@ -861,6 +1035,7 @@ export const db = {
         pat.email || null,
         pat.address || null,
         pat.bloodGroup || 'O+',
+        hospId,
         pat.vitals?.bp || '120/80 mmHg',
         pat.vitals?.heartRate || '74 bpm',
         pat.vitals?.spo2 || '98%',
@@ -868,6 +1043,9 @@ export const db = {
         pat.vitals?.temp || '98.4 °F',
         pat.vitals?.weight || '68 kg',
         pat.vitals?.respirationRate || '16 breaths/min',
+        pat.vitals?.recordedBy || 'Staff Nurse',
+        JSON.stringify(pat.chronicConditions || []),
+        JSON.stringify(pat.allergies || []),
       ]
     );
     await loadStateFromMySQL();
@@ -879,18 +1057,33 @@ export const db = {
     if (!existing) return null;
 
     const merged = { ...existing, ...updates };
+    const hospId = merged.hospitalId && merged.hospitalId.trim() ? merged.hospitalId.trim() : null;
+
     await pool.query(
       `UPDATE patients
-       SET bp = ?, heart_rate = ?, spo2 = ?, sugar = ?, temp = ?, weight = ?, respiration_rate = ?, last_vitals_updated = CURRENT_TIMESTAMP
+       SET name = ?, age = ?, gender = ?, phone = ?, email = ?, address = ?, blood_group = ?, hospital_id = ?,
+           bp = ?, heart_rate = ?, spo2 = ?, sugar = ?, temp = ?, weight = ?, respiration_rate = ?, 
+           vitals_recorded_by = ?, chronic_conditions = ?, allergies = ?, last_vitals_updated = CURRENT_TIMESTAMP
        WHERE id = ?`,
       [
-        merged.vitals?.bp,
-        merged.vitals?.heartRate,
-        merged.vitals?.spo2,
-        merged.vitals?.sugar,
-        merged.vitals?.temp,
-        merged.vitals?.weight,
-        merged.vitals?.respirationRate,
+        merged.name,
+        merged.age,
+        merged.gender,
+        merged.phone,
+        merged.email || null,
+        merged.address || null,
+        merged.bloodGroup || 'O+',
+        hospId,
+        merged.vitals?.bp || '120/80 mmHg',
+        merged.vitals?.heartRate || '74 bpm',
+        merged.vitals?.spo2 || '98%',
+        merged.vitals?.sugar || '96 mg/dL',
+        merged.vitals?.temp || '98.4 °F',
+        merged.vitals?.weight || '68 kg',
+        merged.vitals?.respirationRate || '16 breaths/min',
+        merged.vitals?.recordedBy || 'Staff Nurse',
+        JSON.stringify(merged.chronicConditions || []),
+        JSON.stringify(merged.allergies || []),
         id,
       ]
     );
@@ -898,27 +1091,50 @@ export const db = {
     return state.patients.find((p) => p.id === id) || null;
   },
 
+  async addPatientNote(
+    patientId: string,
+    noteData: { note: string; recordedBy: string; role?: string }
+  ): Promise<void> {
+    const pool = ensureDBConnected();
+    const noteId = `note-${Date.now()}`;
+    await pool.query(
+      `INSERT INTO patient_health_notes (id, patient_id, note, recorded_by, role)
+       VALUES (?, ?, ?, ?, ?)`,
+      [noteId, patientId, noteData.note, noteData.recordedBy, noteData.role || 'Staff Nurse']
+    );
+    await loadStateFromMySQL();
+  },
+
   getPrescriptions: () => state.prescriptions,
   async addPrescription(rx: Prescription): Promise<void> {
     const pool = ensureDBConnected();
+    const rxDate = rx.date || new Date().toISOString().split('T')[0];
+
     await pool.query(
-      `INSERT INTO prescriptions (id, appointment_id, patient_name, doctor_name, specialization, hospital_name, date, diagnosis, symptoms, medicines, advice, follow_up_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO prescriptions (id, appointment_id, patient_name, doctor_name, specialization, hospital_name, date, prescription_date, diagnosis, symptoms, medicines, advice, follow_up_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         rx.id,
-        rx.appointmentId,
+        rx.appointmentId || null,
         rx.patientName,
         rx.doctorName,
-        rx.specialization,
-        rx.hospitalName,
-        rx.date,
+        rx.specialization || 'Consultant Physician',
+        rx.hospitalName || 'Hospital Facility',
+        rxDate,
+        rxDate,
         rx.diagnosis,
-        rx.symptoms,
+        rx.symptoms || '',
         JSON.stringify(rx.medicines || []),
-        rx.advice,
-        rx.followUpDate,
+        rx.advice || '',
+        rx.followUpDate || null,
       ]
     );
+
+    // Update appointment status to Completed in MySQL
+    if (rx.appointmentId) {
+      await pool.query("UPDATE appointments SET status = 'Completed' WHERE id = ?", [rx.appointmentId]);
+    }
+
     await loadStateFromMySQL();
   },
 

@@ -32,6 +32,7 @@ import {
   Sparkles,
   Printer,
   ChevronRight,
+  X,
 } from 'lucide-react';
 
 interface HospitalDeskProps {
@@ -229,12 +230,31 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
   // ==========================================
   // TAB 3: PATIENT RECORDS & HEALTH VITALS (NURSE / EHR DESK)
   // ==========================================
+  // TAB 3: PATIENT RECORDS & HEALTH VITALS (NURSE / EHR DESK)
+  // ==========================================
   const [patients, setPatients] = useState<PatientRecord[]>([]);
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('p-1');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [loadingPatients, setLoadingPatients] = useState<boolean>(true);
   const [patientSearch, setPatientSearch] = useState<string>('');
   const [savingVitals, setSavingVitals] = useState<boolean>(false);
   const [vitalsNotice, setVitalsNotice] = useState<string | null>(null);
+
+  // New Patient Registration Modal State
+  const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
+  const [newRegName, setNewRegName] = useState('');
+  const [newRegAge, setNewRegAge] = useState('32');
+  const [newRegGender, setNewRegGender] = useState('Male');
+  const [newRegPhone, setNewRegPhone] = useState('');
+  const [newRegEmail, setNewRegEmail] = useState('');
+  const [newRegAddress, setNewRegAddress] = useState('');
+  const [newRegBloodGroup, setNewRegBloodGroup] = useState('O+');
+  const [newRegBP, setNewRegBP] = useState('120/80 mmHg');
+  const [newRegHR, setNewRegHR] = useState('72 bpm');
+  const [newRegSpO2, setNewRegSpO2] = useState('98%');
+  const [newRegSugar, setNewRegSugar] = useState('95 mg/dL');
+  const [newRegTemp, setNewRegTemp] = useState('98.4 °F');
+  const [newRegWeight, setNewRegWeight] = useState('65 kg');
+  const [registeringPatient, setRegisteringPatient] = useState(false);
 
   // Vitals form
   const [bp, setBp] = useState<string>('120/80 mmHg');
@@ -255,12 +275,14 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
   const [clinicalNoteText, setClinicalNoteText] = useState<string>('');
   const [savingNote, setSavingNote] = useState<boolean>(false);
 
+  const [patientListFilter, setPatientListFilter] = useState<'hospital' | 'all'>('hospital');
+
   const loadPatients = async () => {
     try {
       setLoadingPatients(true);
       const data = await api.getPatients();
       setPatients(data);
-      if (data.length > 0 && !selectedPatientId) {
+      if (data.length > 0 && (!selectedPatientId || !data.some((p) => p.id === selectedPatientId))) {
         setSelectedPatientId(data[0].id);
       }
     } catch (err) {
@@ -270,9 +292,57 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
     }
   };
 
+  const handleRegisterPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRegName.trim() || !newRegPhone.trim()) {
+      alert('Patient Name and Phone are required to register.');
+      return;
+    }
+    setRegisteringPatient(true);
+    try {
+      const res = await api.createPatient({
+        name: newRegName.trim(),
+        age: Number(newRegAge) || 30,
+        gender: newRegGender,
+        phone: newRegPhone.trim(),
+        email: newRegEmail.trim() || undefined,
+        address: newRegAddress.trim() || undefined,
+        bloodGroup: newRegBloodGroup,
+        hospitalId: activeHospitalId,
+        vitals: {
+          bp: newRegBP.trim() || '120/80 mmHg',
+          heartRate: newRegHR.trim() || '74 bpm',
+          spo2: newRegSpO2.trim() || '98%',
+          sugar: newRegSugar.trim() || '96 mg/dL',
+          temp: newRegTemp.trim() || '98.4 °F',
+          weight: newRegWeight.trim() || '68 kg',
+          respirationRate: '16 breaths/min',
+          recordedBy: `${currentUser.name || 'Hospital Desk'} (${activeHospital.name})`,
+          lastUpdated: new Date().toLocaleString(),
+        },
+      });
+
+      setIsNewPatientModalOpen(false);
+      setNewRegName('');
+      setNewRegPhone('');
+      setNewRegAddress('');
+      await loadPatients();
+      if (res.patient?.id) {
+        setSelectedPatientId(res.patient.id);
+      }
+      setVitalsNotice(`New patient "${res.patient.name}" successfully added to database!`);
+      setTimeout(() => setVitalsNotice(null), 5000);
+      onRefreshAll();
+    } catch (err: any) {
+      alert('Error registering patient: ' + err.message);
+    } finally {
+      setRegisteringPatient(false);
+    }
+  };
+
   useEffect(() => {
     loadPatients();
-  }, []);
+  }, [activeHospitalId, appointments]);
 
   const selectedPatient = patients.find((p) => p.id === selectedPatientId) || patients[0];
 
@@ -749,6 +819,30 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={async () => {
+                                const match = patients.find(
+                                  (p) =>
+                                    (appt.patientId && p.id === appt.patientId) ||
+                                    (appt.patientPhone && p.phone === appt.patientPhone) ||
+                                    p.name.toLowerCase() === appt.patientName.toLowerCase()
+                                );
+                                if (match) {
+                                  setSelectedPatientId(match.id);
+                                } else if (appt.patientId) {
+                                  setSelectedPatientId(appt.patientId);
+                                }
+                                setPatientListFilter('hospital');
+                                await loadPatients();
+                                setActiveTab('vitals');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold text-[11px] cursor-pointer shadow-xs flex items-center gap-1 transition-all"
+                              title="Record or check patient vitals"
+                            >
+                              <Heart className="w-3 h-3 text-rose-300" />
+                              <span>Vitals</span>
+                            </button>
+
                             {appt.status === 'Scheduled' && (
                               <button
                                 disabled={isUpdating}
@@ -1044,14 +1138,60 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
               highContrast ? 'bg-neutral-900 border-yellow-400 text-white' : 'bg-white border-slate-200'
             }`}
           >
-            <div>
-              <h3 className="font-extrabold text-base flex items-center gap-2">
-                <User className="w-4 h-4 text-teal-600" />
-                <span>Hospital Patients Registry</span>
-              </h3>
-              <p className="text-xs text-slate-500">
-                Search and select patient to update vital signs &amp; EHR notes.
-              </p>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="font-extrabold text-base flex items-center gap-2">
+                  <User className="w-4 h-4 text-teal-600" />
+                  <span>Hospital Patients Registry</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Search &amp; select patient to update vital signs.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewPatientModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer shrink-0 transition-all"
+                title="Register new patient into database"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Patient</span>
+              </button>
+            </div>
+
+            {/* Filter Toggle: This Hospital vs All Patients */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setPatientListFilter('hospital')}
+                className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  patientListFilter === 'hospital'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                This Hospital ({
+                  patients.filter((p) =>
+                    p.hospitalId === activeHospitalId ||
+                    hospitalAppointments.some((a) =>
+                      (a.patientId && a.patientId === p.id) ||
+                      (a.patientPhone && a.patientPhone === p.phone) ||
+                      a.patientName.toLowerCase() === p.name.toLowerCase()
+                    )
+                  ).length
+                })
+              </button>
+              <button
+                type="button"
+                onClick={() => setPatientListFilter('all')}
+                className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  patientListFilter === 'all'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Patients ({patients.length})
+              </button>
             </div>
 
             {/* Search */}
@@ -1068,23 +1208,61 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
 
             {/* Patient Cards List */}
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-              {patients
-                .filter(
+              {(() => {
+                const hospitalMatches = patients.filter((p) =>
+                  p.hospitalId === activeHospitalId ||
+                  hospitalAppointments.some((a) =>
+                    (a.patientId && a.patientId === p.id) ||
+                    (a.patientPhone && a.patientPhone === p.phone) ||
+                    a.patientName.toLowerCase() === p.name.toLowerCase()
+                  )
+                );
+
+                const sourceList = patientListFilter === 'hospital' && hospitalMatches.length > 0
+                  ? hospitalMatches
+                  : patients;
+
+                const filtered = sourceList.filter(
                   (p) =>
                     patientSearch === '' ||
                     p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
                     p.phone.includes(patientSearch) ||
                     p.id.includes(patientSearch)
-                )
-                .map((patient) => {
+                );
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="p-6 text-center text-slate-400 text-xs italic border border-dashed border-slate-200 rounded-2xl space-y-2">
+                      <p>No patients found matching your search.</p>
+                      {patientListFilter === 'hospital' && (
+                        <button
+                          type="button"
+                          onClick={() => setPatientListFilter('all')}
+                          className="text-teal-700 underline font-bold"
+                        >
+                          Show all registered patients
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
+
+                return filtered.map((patient) => {
                   const isSelected = selectedPatientId === patient.id;
+                  const patientAppt = hospitalAppointments.find(
+                    (a) =>
+                      (a.patientId && a.patientId === patient.id) ||
+                      (a.patientPhone && a.patientPhone === patient.phone) ||
+                      a.patientName.toLowerCase() === patient.name.toLowerCase()
+                  );
+
                   return (
                     <div
                       key={patient.id}
                       onClick={() => setSelectedPatientId(patient.id)}
                       className={`p-3.5 rounded-2xl cursor-pointer border transition-all text-xs ${
                         isSelected
-                          ? 'border-teal-600 bg-teal-50/80 ring-2 ring-teal-500 font-bold'
+                          ? 'border-teal-600 bg-teal-50/80 ring-2 ring-teal-500 font-bold shadow-xs'
                           : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                       }`}
                     >
@@ -1097,6 +1275,17 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                       <div className="text-[11px] text-slate-500 mt-1">
                         Age: {patient.age} yrs &bull; {patient.gender} &bull; Ph: {patient.phone}
                       </div>
+
+                      {/* Matching Hospital Booking Badge */}
+                      {patientAppt && (
+                        <div className="mt-1.5 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-[10px] font-bold flex items-center justify-between">
+                          <span>Booked: {patientAppt.slotTime} ({patientAppt.doctorName})</span>
+                          <span className="px-1.5 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-extrabold">
+                            {patientAppt.status}
+                          </span>
+                        </div>
+                      )}
+
                       {patient.vitals?.lastUpdated && (
                         <div className="text-[10px] text-slate-400 mt-1 font-mono">
                           Last Vitals: {patient.vitals.lastUpdated}
@@ -1104,7 +1293,8 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                       )}
                     </div>
                   );
-                })}
+                });
+              })()}
             </div>
           </div>
 
@@ -1149,6 +1339,43 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
                     </span>
                   </div>
                 </div>
+
+                {/* Active Appointment Alert if scheduled for this patient */}
+                {(() => {
+                  const matchingAppt = hospitalAppointments.find(
+                    (a) =>
+                      (a.patientId && a.patientId === selectedPatient.id) ||
+                      (a.patientPhone && a.patientPhone === selectedPatient.phone) ||
+                      a.patientName.toLowerCase() === selectedPatient.name.toLowerCase()
+                  );
+                  if (!matchingAppt) return null;
+                  return (
+                    <div className="p-4 rounded-2xl bg-teal-50/80 border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div>
+                        <span className="font-extrabold text-teal-900 block text-sm">
+                          Scheduled OPD Visit with {matchingAppt.doctorName}
+                        </span>
+                        <div className="text-teal-800 text-[11px] mt-0.5">
+                          Date: <strong>{matchingAppt.appointmentDate}</strong> ({matchingAppt.appointmentDay}) &bull; Slot: <strong>{matchingAppt.slotTime}</strong> &bull; Chief Complaint: <strong>{matchingAppt.patientDisease}</strong>
+                        </div>
+                        {matchingAppt.notes && (
+                          <div className="text-[11px] text-slate-600 italic mt-1">
+                            Patient Note: &quot;{matchingAppt.notes}&quot;
+                          </div>
+                        )}
+                      </div>
+                      <span className={`px-3 py-1 rounded-full font-bold text-[11px] shrink-0 ${
+                        matchingAppt.status === 'Completed'
+                          ? 'bg-emerald-200 text-emerald-900'
+                          : matchingAppt.status === 'In Consultation'
+                          ? 'bg-amber-200 text-amber-900'
+                          : 'bg-teal-200 text-teal-900'
+                      }`}>
+                        Status: {matchingAppt.status}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Vitals Input Grid */}
                 <form onSubmit={handleSaveVitals} className="space-y-6 text-xs">
@@ -1586,6 +1813,216 @@ export const HospitalDesk: React.FC<HospitalDeskProps> = ({
               Enter an Appointment ID (such as #1 or #2) above and click &quot;Find Record&quot; to inspect and update.
             </div>
           )}
+        </div>
+      )}
+
+      {/* MODAL: REGISTER NEW WALK-IN PATIENT DIRECTLY TO MYSQL */}
+      {isNewPatientModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div>
+                <h3 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+                  <User className="w-5 h-5 text-teal-600" />
+                  <span>Register Patient to Hospital Database</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Affiliated Hospital: {activeHospital.name} &bull; Directly saves to MySQL `patients` table
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewPatientModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRegisterPatient} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Patient Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newRegName}
+                    onChange={(e) => setNewRegName(e.target.value)}
+                    placeholder="e.g. Rahul Sharma"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={newRegPhone}
+                    onChange={(e) => setNewRegPhone(e.target.value)}
+                    placeholder="e.g. +91 98230 11223"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-mono focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={newRegEmail}
+                    onChange={(e) => setNewRegEmail(e.target.value)}
+                    placeholder="patient@example.com"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Age (Years)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={newRegAge}
+                    onChange={(e) => setNewRegAge(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Gender</label>
+                  <select
+                    value={newRegGender}
+                    onChange={(e) => setNewRegGender(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Blood Group</label>
+                  <select
+                    value={newRegBloodGroup}
+                    onChange={(e) => setNewRegBloodGroup(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white font-mono font-bold"
+                  >
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Residential Address</label>
+                  <input
+                    type="text"
+                    value={newRegAddress}
+                    onChange={(e) => setNewRegAddress(e.target.value)}
+                    placeholder="Street, City, Pin"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300"
+                  />
+                </div>
+              </div>
+
+              {/* Baseline Vitals Check */}
+              <div className="pt-2 border-t border-slate-200">
+                <span className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 mb-2">
+                  <Heart className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Initial Clinical Vitals (Check-in vitals)</span>
+                </span>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-0.5">Blood Pressure</label>
+                    <input
+                      type="text"
+                      value={newRegBP}
+                      onChange={(e) => setNewRegBP(e.target.value)}
+                      placeholder="120/80 mmHg"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-0.5">Heart Rate</label>
+                    <input
+                      type="text"
+                      value={newRegHR}
+                      onChange={(e) => setNewRegHR(e.target.value)}
+                      placeholder="72 bpm"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-0.5">SpO2 Oxygen</label>
+                    <input
+                      type="text"
+                      value={newRegSpO2}
+                      onChange={(e) => setNewRegSpO2(e.target.value)}
+                      placeholder="98%"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-0.5">Blood Sugar</label>
+                    <input
+                      type="text"
+                      value={newRegSugar}
+                      onChange={(e) => setNewRegSugar(e.target.value)}
+                      placeholder="95 mg/dL"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-0.5">Temperature</label>
+                    <input
+                      type="text"
+                      value={newRegTemp}
+                      onChange={(e) => setNewRegTemp(e.target.value)}
+                      placeholder="98.4 °F"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-0.5">Weight</label>
+                    <input
+                      type="text"
+                      value={newRegWeight}
+                      onChange={(e) => setNewRegWeight(e.target.value)}
+                      placeholder="65 kg"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsNewPatientModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={registeringPatient}
+                  className="px-6 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold flex items-center gap-2 shadow-md cursor-pointer transition-all"
+                >
+                  {registeringPatient ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Push Patient Record to MySQL</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

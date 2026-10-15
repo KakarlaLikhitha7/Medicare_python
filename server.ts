@@ -635,6 +635,37 @@ app.put('/api/patients/:id', async (req: Request, res: Response) => {
   res.json({ message: 'Patient updated successfully', patient: updated });
 });
 
+app.post('/api/patients/:id/notes', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { note, recordedBy, role } = req.body;
+    if (!note) {
+      return res.status(400).json({ error: 'Note text is required.' });
+    }
+    const patient = db.findPatientById(id);
+    if (!patient) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    await db.addPatientNote(id, {
+      note: String(note).trim(),
+      recordedBy: recordedBy || 'Staff Nurse',
+      role: role || 'Staff Nurse',
+    });
+    const updatedPatient = db.findPatientById(id);
+    const notesList = updatedPatient?.healthNotes || [];
+    const newNote = notesList[notesList.length - 1] || {
+      id: `note-${Date.now()}`,
+      date: new Date().toLocaleString(),
+      note,
+      recordedBy: recordedBy || 'Staff Nurse',
+      role: role || 'Staff Nurse',
+    };
+    res.status(201).json({ message: 'Clinical note added successfully', note: newNote, patient: updatedPatient });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Error adding clinical note' });
+  }
+});
+
 // Prescriptions
 app.get('/api/prescriptions', (req: Request, res: Response) => {
   const { patientName } = req.query;
@@ -649,26 +680,50 @@ app.get('/api/prescriptions', (req: Request, res: Response) => {
 
 app.post('/api/prescriptions', async (req: Request, res: Response) => {
   try {
-    const { appointmentId, patientName, doctorName, diagnosis, symptoms, medicines, advice, followUpDate } =
-      req.body;
+    const {
+      appointmentId,
+      patientName,
+      doctorName,
+      specialization,
+      hospitalName,
+      diagnosis,
+      symptoms,
+      medicines,
+      advice,
+      followUpDate,
+    } = req.body;
+
+    if (!patientName || !doctorName || !diagnosis) {
+      return res.status(400).json({ error: 'Patient Name, Doctor Name, and Clinical Diagnosis are required.' });
+    }
+
+    const appt = appointmentId ? db.findAppointmentById(Number(appointmentId)) : undefined;
+    const doc = appt ? db.findDoctorById(appt.doctorId) : undefined;
+    const hosp = appt?.hospitalId ? db.findHospitalById(appt.hospitalId) : undefined;
 
     const newRx: Prescription = {
       id: 'rx-' + Date.now(),
       appointmentId: Number(appointmentId) || 0,
-      patientName: patientName || 'Patient',
-      doctorName: doctorName || 'Attending Physician',
-      specialization: 'Consultant Physician',
-      hospitalName: 'Hospital Facility',
+      patientName: String(patientName).trim(),
+      doctorName: String(doctorName).trim(),
+      specialization: specialization || doc?.specialization || 'Consultant Physician',
+      hospitalName: hospitalName || appt?.hospitalName || hosp?.name || 'Hospital Facility',
       date: new Date().toISOString().split('T')[0],
-      diagnosis: diagnosis || 'Under Evaluation',
-      symptoms: symptoms || '',
-      medicines: medicines || [],
-      advice: advice || 'Rest and stay hydrated.',
+      diagnosis: String(diagnosis).trim(),
+      symptoms: symptoms ? String(symptoms).trim() : appt?.patientDisease || '',
+      medicines: Array.isArray(medicines) ? medicines : [],
+      advice: advice ? String(advice).trim() : 'Follow prescribed medication schedule.',
       followUpDate: followUpDate || '',
     };
 
     await db.addPrescription(newRx);
-    res.status(201).json(newRx);
+
+    // If appointment ID was provided, mark appointment completed in MySQL
+    if (appointmentId) {
+      await db.updateAppointment(Number(appointmentId), { status: 'Completed' });
+    }
+
+    res.status(201).json({ message: 'Prescription issued and saved to MySQL successfully!', prescription: newRx });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Error issuing prescription' });
   }

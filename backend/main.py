@@ -80,10 +80,27 @@ class PrescriptionCreate(BaseModel):
     patient_name: str
     doctor_name: str
     diagnosis: str
+    specialization: Optional[str] = "Consultant Physician"
+    hospital_name: Optional[str] = "Hospital Facility"
     symptoms: Optional[str] = ""
     medicines: Optional[List[Dict[str, Any]]] = []
     advice: Optional[str] = ""
     follow_up_date: Optional[str] = ""
+
+class PatientCreate(BaseModel):
+    name: str
+    phone: str
+    age: Optional[int] = 30
+    gender: Optional[str] = "Other"
+    email: Optional[str] = None
+    address: Optional[str] = ""
+    blood_group: Optional[str] = "O+"
+    hospital_id: Optional[str] = None
+
+class PatientNoteCreate(BaseModel):
+    note: str
+    recorded_by: Optional[str] = "Staff Nurse"
+    role: Optional[str] = "Staff Nurse"
 
 class VitalsUpdate(BaseModel):
     bp: Optional[str] = "120/80 mmHg"
@@ -529,6 +546,20 @@ def create_appointment(payload: AppointmentCreate):
 
         day_name = datetime.strptime(payload.appointment_date, "%Y-%m-%d").strftime("%A")
 
+        # 3. Ensure patient exists in patients table so hospital desk and doctor can view them
+        cursor.execute("SELECT id FROM patients WHERE phone = %s", (payload.patient_phone,))
+        existing_pat = cursor.fetchone()
+        if not existing_pat:
+            pat_id = f"pat-{int(datetime.now().timestamp())}"
+            cursor.execute(
+                """
+                INSERT INTO patients (id, name, age, phone, address, blood_group, hospital_id, bp, heart_rate, spo2, sugar, temp, weight, respiration_rate, vitals_recorded_by)
+                VALUES (%s, %s, %s, %s, %s, 'O+', %s, '120/80 mmHg', '74 bpm', '98%', '96 mg/dL', '98.4 °F', '68 kg', '16 breaths/min', 'OPD Reception')
+                ON DUPLICATE KEY UPDATE name=VALUES(name), phone=VALUES(phone)
+                """,
+                (pat_id, payload.patient_name, payload.patient_age or 30, payload.patient_phone, payload.patient_address or "", payload.hospital_id)
+            )
+
         cursor.execute(
             """
             INSERT INTO appointments (patient_name, patient_age, patient_phone, patient_disease, 
@@ -597,9 +628,9 @@ def get_prescriptions():
         cursor.execute("""
             SELECT id, appointment_id as appointmentId, patient_name as patientName, 
                    doctor_name as doctorName, specialization, hospital_name as hospitalName, 
-                   prescription_date as date, diagnosis, symptoms, medicines, advice, follow_up_date as followUpDate
+                   COALESCE(prescription_date, date) as date, diagnosis, symptoms, medicines, advice, follow_up_date as followUpDate
             FROM prescriptions
-            ORDER BY prescription_date DESC
+            ORDER BY created_at DESC
         """)
         rows = cursor.fetchall()
         cursor.close()
@@ -620,10 +651,10 @@ def create_prescription(payload: PrescriptionCreate):
         cursor = conn.cursor(dictionary=True)
         cursor.execute(
             """
-            INSERT INTO prescriptions (id, appointment_id, patient_name, doctor_name, prescription_date, diagnosis, symptoms, medicines, advice, follow_up_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO prescriptions (id, appointment_id, patient_name, doctor_name, specialization, hospital_name, prescription_date, diagnosis, symptoms, medicines, advice, follow_up_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (new_id, payload.appointment_id, payload.patient_name, payload.doctor_name, today, payload.diagnosis, payload.symptoms, json.dumps(payload.medicines), payload.advice, payload.follow_up_date)
+            (new_id, payload.appointment_id, payload.patient_name, payload.doctor_name, payload.specialization or "Consultant Physician", payload.hospital_name or "Hospital Facility", today, payload.diagnosis, payload.symptoms, json.dumps(payload.medicines), payload.advice, payload.follow_up_date)
         )
         cursor.execute("UPDATE appointments SET status = 'Completed' WHERE id = %s", (payload.appointment_id,))
         conn.commit()
@@ -642,7 +673,7 @@ def get_patients():
     try:
         conn = database.get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM patients")
+        cursor.execute("SELECT * FROM patients ORDER BY created_at DESC")
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -650,6 +681,49 @@ def get_patients():
     except Exception as e:
         print(f"Database query error in /api/patients: {e}")
         return []
+
+@app.post("/api/patients")
+def create_patient(payload: PatientCreate):
+    """Creates a new patient in MySQL database"""
+    try:
+        conn = database.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        new_id = f"pat-{int(datetime.now().timestamp())}"
+        cursor.execute(
+            """
+            INSERT INTO patients (id, name, age, gender, phone, email, address, blood_group, hospital_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE name=VALUES(name), phone=VALUES(phone)
+            """,
+            (new_id, payload.name, payload.age or 30, payload.gender or "Other", payload.phone, payload.email, payload.address or "", payload.blood_group or "O+", payload.hospital_id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"message": "Patient created successfully!", "id": new_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/patients/{patient_id}/notes")
+def add_patient_note(patient_id: str, payload: PatientNoteCreate):
+    """Adds a clinical health note to MySQL patient_health_notes table"""
+    try:
+        conn = database.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        note_id = f"note-{int(datetime.now().timestamp())}"
+        cursor.execute(
+            """
+            INSERT INTO patient_health_notes (id, patient_id, note, recorded_by, role)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (note_id, patient_id, payload.note, payload.recorded_by or "Staff Nurse", payload.role or "Staff Nurse")
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"message": "Clinical note saved to database successfully!", "id": note_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/patients/{patient_id}")
 def update_patient_vitals(patient_id: str, payload: VitalsUpdate):

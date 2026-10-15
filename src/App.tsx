@@ -12,6 +12,7 @@ import {
   Prescription,
   SMSLog,
   UserSession,
+  PatientRecord,
 } from './types';
 import { api } from './services/api';
 
@@ -66,6 +67,7 @@ export default function App() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [patients, setPatients] = useState<PatientRecord[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [smsLogs, setSmsLogs] = useState<SMSLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -91,11 +93,12 @@ export default function App() {
   // Initial Data Fetching
   const loadAllData = async () => {
     try {
-      const [hospData, deptData, docData, apptData, rxData, smsData] = await Promise.all([
+      const [hospData, deptData, docData, apptData, patData, rxData, smsData] = await Promise.all([
         api.getHospitals(),
         api.getDepartments(),
         api.getDoctors(),
         api.getAppointments(),
+        api.getPatients(),
         api.getPrescriptions(),
         api.getSMSLogs(),
       ]);
@@ -104,6 +107,7 @@ export default function App() {
       setDepartments(deptData);
       setDoctors(docData);
       setAppointments(apptData);
+      setPatients(patData);
       setPrescriptions(rxData);
       setSmsLogs(smsData);
     } catch (err) {
@@ -337,6 +341,8 @@ export default function App() {
               <DoctorDashboard
                 doctors={doctors}
                 appointments={appointments}
+                patients={patients}
+                prescriptions={prescriptions}
                 currentUser={currentUser}
                 onRefreshAppointments={loadAllData}
                 highContrast={highContrast}
